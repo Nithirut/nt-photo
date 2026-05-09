@@ -62,41 +62,27 @@ export default function Home() {
   };
 
   const downloadSelected = async () => {
-    if (selected.size === 0) return;
-    setDownloading(true);
-    setDownloadProgress(0);
+  if (selected.size === 0) return;
+  setDownloading(true);
+  const selectedPhotos = photos.filter(p => selected.has(p.id));
 
-    try {
-      const JSZip = (await import('jszip')).default;
-      const zip = new JSZip();
-      const selectedPhotos = photos.filter(p => selected.has(p.id));
+  for (let i = 0; i < selectedPhotos.length; i++) {
+    const photo = selectedPhotos[i];
+    setDownloadProgress(Math.round(((i + 1) / selectedPhotos.length) * 100));
+    const a = document.createElement('a');
+    a.href = `/api/download?fileId=${photo.id}`;
+    a.download = photo.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    // รอ 800ms ระหว่างแต่ละรูป ไม่งั้น browser บล็อก
+    await new Promise(r => setTimeout(r, 800));
+  }
 
-      for (let i = 0; i < selectedPhotos.length; i++) {
-        const photo = selectedPhotos[i];
-        setDownloadProgress(Math.round(((i + 1) / selectedPhotos.length) * 100));
-        try {
-          const res = await fetch(`/api/download?fileId=${photo.id}`);
-          const blob = await res.blob();
-          zip.file(photo.name, blob);
-        } catch (e) {
-          console.error(`Failed: ${photo.name}`);
-        }
-      }
-
-      const content = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(content);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${selectedFolder?.name || 'NT-Photo'}-${selected.size}รูป.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
-      cancelSelect();
-    } catch (err) {
-      alert('เกิดข้อผิดพลาด กรุณาลองใหม่');
-    }
-    setDownloading(false);
-    setDownloadProgress(0);
-  };
+  setDownloading(false);
+  setDownloadProgress(0);
+  cancelSelect();
+};
 
   const getImageUrl = (photo) => `https://drive.google.com/thumbnail?id=${photo.id}&sz=w800`;
   const getDownloadUrl = (photo) => `/api/download?fileId=${photo.id}`;
