@@ -130,7 +130,7 @@ export default function Home() {
 
   const getImageUrl = (photo) => `https://drive.google.com/thumbnail?id=${photo.id}&sz=w800`;
   const getDownloadUrl = (photo) => `/api/download?fileId=${photo.id}`;
-  const getFullUrl = (photo) => `https://drive.google.com/uc?export=view&id=${photo.id}`;
+  const getFullUrl = (photo) => `/api/image?fileId=${photo.id}`;
 
   const allPageSelected = pagePhotos.length > 0 && pagePhotos.every(p => selected.has(p.id));
   const atMax = selected.size >= MAX_SELECT;
