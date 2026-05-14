@@ -532,7 +532,7 @@ export default function Home() {
                 {totalPages > 1 && (
                   <div className="page-info">
                     หน้า {currentPage} / {totalPages} — รูปที่ {pageStart + 1}–{Math.min(pageStart + PHOTOS_PER_PAGE, photos.length)}
-                           </div>
+                  </div>
                 )}
                 <div className={`photo-grid ${selectMode ? 'select-mode' : ''}`}>
                   {pagePhotos.map((photo, i) => {
@@ -547,7 +547,7 @@ export default function Home() {
                         <img src={getImageUrl(photo)} alt={photo.name} loading="lazy" />
                         <div className="photo-circle"/>
                         <div className="photo-check">✓</div>
-                        <div className="photo-num">{\npageStart + i + 1}</div>
+                        <div className="photo-num">{pageStart + i + 1}</div>
                       </div>
                     );
                   })}
@@ -580,7 +580,7 @@ export default function Home() {
             {allPageSelected ? 'ยกเลิกหน้านี้' : 'เลือกหน้านี้'}
           </button>
           <button className="sel-btn primary" onClick={downloadSelected} disabled={selected.size === 0}>
-            ⬇ บันทึก�{selected.size > 0 ? ` ${selected.size}` : ''} รูป
+            ⬇ บันทึก{selected.size > 0 ? ` ${selected.size}` : ''} รูป
           </button>
         </div>
       )}
