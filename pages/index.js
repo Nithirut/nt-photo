@@ -495,7 +495,7 @@ export default function Home() {
         <div className="tagline">
           {selectedSubfolder ? selectedSubfolder.name :
            selectedFolder ? selectedFolder.name :
-           (SINGLE_GROUP_MODE ? 'NUMTHON Event Gallery' :
+           (SINGLE_GROUP_MODE ? 'NUMTHONG Event Gallery' :
             selectedGroup ? selectedGroup.name : 'ภาพถ่ายกิจกรรม')}
         </div>
       </div>
@@ -640,7 +640,7 @@ export default function Home() {
         )}
       </div>
 
-      <div className="app-footer">Created by Nithirut Chirathiraphat NT 866</div>
+      <div className="app-footer">Created by Nithirut Chirathiraphat<br/>NT 866</div>
 
       {selectMode && (
         <div className="select-bar">
