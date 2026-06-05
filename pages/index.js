@@ -301,6 +301,14 @@ export default function Home() {
         .hero-sub { font-size:14px; color:#cfc8ba; }
         .hero-help { font-size:12px; color:#7e7768; margin-top:6px; }
 
+        /* How-to guidance card */
+        .howto { max-width:440px; margin:0 auto 26px; background:linear-gradient(135deg,rgba(201,168,76,0.06),rgba(255,255,255,0.02)); border:1px solid rgba(201,168,76,0.18); border-radius:14px; padding:15px 18px; }
+        .howto-title { font-family:'Playfair Display',serif; font-size:12px; letter-spacing:3px; color:#c9a84c; text-transform:uppercase; text-align:center; margin-bottom:12px; }
+        .howto-list { display:flex; flex-direction:column; gap:9px; }
+        .howto-item { display:flex; gap:10px; align-items:flex-start; font-size:13px; color:#cfc8ba; line-height:1.5; }
+        .howto-num { flex:none; width:20px; height:20px; border-radius:50%; background:rgba(201,168,76,0.15); color:#c9a84c; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+        .howto-note { margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); font-size:11px; color:#8a8372; text-align:center; line-height:1.5; }
+
         /* Group Selection (multi-group mode only) */
         .welcome-header { text-align:center; padding:24px 0 28px; }
         .welcome-title { font-family:'Playfair Display',serif; font-size:24px; color:#f0ece4; margin-bottom:6px; }
@@ -530,6 +538,18 @@ export default function Home() {
                 <div className="hero-divider" />
                 <div className="hero-sub">รวมภาพบรรยากาศกิจกรรม</div>
                 <div className="hero-help">เลือกภาพที่ต้องการ แล้วดาวน์โหลดได้ทันที</div>
+              </div>
+            )}
+            {SINGLE_GROUP_MODE && (
+              <div className="howto">
+                <div className="howto-title">วิธีใช้งาน</div>
+                <div className="howto-list">
+                  <div className="howto-item"><span className="howto-num">1</span><span>เลือกอัลบั้มกิจกรรม</span></div>
+                  <div className="howto-item"><span className="howto-num">2</span><span>แตะรูปเพื่อดูภาพขนาดใหญ่</span></div>
+                  <div className="howto-item"><span className="howto-num">3</span><span>กด “เลือกหลายรูป” หากต้องการดาวน์โหลดหลายภาพ</span></div>
+                  <div className="howto-item"><span className="howto-num">4</span><span>เลือก “โซเชียล” สำหรับไฟล์เล็ก เหมาะกับ Facebook / LINE / IG</span></div>
+                </div>
+                <div className="howto-note">บนมือถือ บางเครื่องอาจถามยืนยันการดาวน์โหลดทีละรูป</div>
               </div>
             )}
             <div className="section-title">📁 เลือกงาน / อัลบั้ม</div>
