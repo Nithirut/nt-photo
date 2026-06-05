@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 
-const PHOTOS_PER_PAGE = 10;
+const PHOTOS_PER_PAGE = 12;
 const MAX_SELECT = 10;
+const DL_KEY = 'nt_photo_downloaded'; // "download memory" (this device only)
+
+// ===== Feature flag: single-group (NUMTHON) mode =====
+// Set SINGLE_GROUP_MODE = false to bring back the full 4-group picker. Nothing else needs changing.
+const SINGLE_GROUP_MODE = true;
 
 const GROUPS = [
   { id: 'lica', name: 'LICA', emoji: '🏆', folderId: '1XWC1YGcl_oCzxX0GSMcX2BiiT2xaGTO3' },
@@ -10,6 +15,8 @@ const GROUPS = [
   { id: 'ideaplan', name: 'Ideaplan Insurance', emoji: '💡', folderId: '1A6SLm1tg1sbij4ZYRunT0anBqER17bcS' },
   { id: 'pednoi', name: 'เป็ดน้อยอินชัวรันส์', emoji: '🦆', folderId: '1rbI6ePA4BtQkbR3QtiHd4bl7tofji4V5' },
 ];
+
+const FEATURED_GROUP = GROUPS.find(g => g.id === 'numthong');
 
 export default function Home() {
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -29,9 +36,33 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const [maxAlert, setMaxAlert] = useState(false);
 
+  // Download memory + download size
+  const [downloaded, setDownloaded] = useState(new Set());
+  const [dlSize, setDlSize] = useState('full'); // 'full' | 'social'
+
   const totalPages = Math.ceil(photos.length / PHOTOS_PER_PAGE);
   const pageStart = (currentPage - 1) * PHOTOS_PER_PAGE;
   const pagePhotos = photos.slice(pageStart, pageStart + PHOTOS_PER_PAGE);
+
+  // On load: restore download memory + (single mode) auto-open NUMTHON
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DL_KEY);
+      if (raw) setDownloaded(new Set(JSON.parse(raw)));
+    } catch (e) {}
+    if (SINGLE_GROUP_MODE && FEATURED_GROUP) {
+      openGroup(FEATURED_GROUP);
+    }
+  }, []);
+
+  const markDownloaded = (ids) => {
+    setDownloaded(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => next.add(id));
+      try { localStorage.setItem(DL_KEY, JSON.stringify([...next])); } catch (e) {}
+      return next;
+    });
+  };
 
   const openGroup = (group) => {
     setSelectedGroup(group);
@@ -178,6 +209,20 @@ export default function Home() {
     }
   };
 
+  const triggerDownload = (photo, size) => {
+    const a = document.createElement('a');
+    a.href = `/api/download?fileId=${photo.id}${size === 'social' ? '&size=social' : ''}`;
+    a.download = photo.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const downloadOne = (photo, size) => {
+    triggerDownload(photo, size);
+    markDownloaded([photo.id]);
+  };
+
   const downloadSelected = async () => {
     if (selected.size === 0) return;
     setDownloading(true);
@@ -185,14 +230,10 @@ export default function Home() {
     for (let i = 0; i < selectedPhotos.length; i++) {
       const photo = selectedPhotos[i];
       setDownloadProgress(Math.round(((i + 1) / selectedPhotos.length) * 100));
-      const a = document.createElement('a');
-      a.href = `/api/download?fileId=${photo.id}`;
-      a.download = photo.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      triggerDownload(photo, dlSize);
       await new Promise(r => setTimeout(r, 800));
     }
+    markDownloaded(selectedPhotos.map(p => p.id));
     setDownloading(false);
     setDownloadProgress(0);
     cancelSelect();
@@ -204,12 +245,15 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const getImageUrl = (photo) => `https://drive.google.com/thumbnail?id=${photo.id}&sz=w800`;
-  const getDownloadUrl = (photo) => `/api/download?fileId=${photo.id}`;
-  const getFullUrl = (photo) => `/api/image?fileId=${photo.id}`;
+  // Image optimization: light thumbs in grid, medium in lightbox, full original only on download
+  const getThumbUrl = (photo) => `https://drive.google.com/thumbnail?id=${photo.id}&sz=w400`;
+  const getViewUrl = (photo) => `https://drive.google.com/thumbnail?id=${photo.id}&sz=w1600`;
 
   const allPageSelected = pagePhotos.length > 0 && pagePhotos.every(p => selected.has(p.id));
   const atMax = selected.size >= MAX_SELECT;
+
+  // In single-group mode the album list is the landing screen (no group picker, no back-to-groups)
+  const atAlbumList = selectedGroup && !selectedFolder;
 
   const getPageNumbers = () => {
     if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -224,32 +268,40 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>NT Photo</title>
+        <title>{SINGLE_GROUP_MODE ? `${FEATURED_GROUP.name} Photo Gallery` : 'NT Photo'}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet" />
       </Head>
       <style>{`
         * { margin:0; padding:0; box-sizing:border-box; }
         body { background:#0a0a0a; color:#f0ece4; font-family:'Sarabun',sans-serif; min-height:100vh; }
         .header {
           background:linear-gradient(180deg,#111 0%,transparent 100%);
-          padding:28px 20px 20px; text-align:center; position:sticky; top:0; z-index:10;
-          backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,0.06);
-          position:relative;
+          padding:24px 20px 16px; text-align:center; position:sticky; top:0; z-index:10;
+          backdrop-filter:blur(12px); border-bottom:1px solid rgba(255,255,255,0.06); position:relative;
         }
-        .logo { font-family:'Playfair Display',serif; font-size:26px; font-weight:700; letter-spacing:3px; }
+        .logo { font-family:'Playfair Display',serif; font-size:24px; font-weight:700; letter-spacing:3px; }
         .logo span { color:#c9a84c; }
-        .tagline { font-size:11px; color:#888; letter-spacing:4px; text-transform:uppercase; margin-top:3px; }
+        .tagline { font-size:10px; color:#888; letter-spacing:4px; text-transform:uppercase; margin-top:3px; }
         .back-btn {
           position:absolute; left:16px; top:50%; transform:translateY(-50%);
           background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12);
           color:#f0ece4; padding:7px 14px; border-radius:20px; cursor:pointer;
           font-size:12px; font-family:'Sarabun',sans-serif;
         }
-        .container { padding:20px 14px; max-width:1200px; margin:0 auto; }
+        .container { padding:18px 14px; max-width:1200px; margin:0 auto; }
         .section-title { font-family:'Playfair Display',serif; font-size:13px; color:#c9a84c; letter-spacing:4px; text-transform:uppercase; margin-bottom:16px; }
 
-        /* Group Selection */
+        /* Premium event hero */
+        .hero { text-align:center; padding:26px 16px 24px; }
+        .hero-kicker { font-size:11px; letter-spacing:5px; color:#c9a84c; text-transform:uppercase; }
+        .hero-title { font-family:'Playfair Display',serif; font-size:30px; font-weight:700; margin:10px 0 4px; line-height:1.2; }
+        .hero-title span { color:#c9a84c; }
+        .hero-divider { width:48px; height:2px; background:#c9a84c; margin:12px auto; border-radius:2px; }
+        .hero-sub { font-size:14px; color:#cfc8ba; }
+        .hero-help { font-size:12px; color:#7e7768; margin-top:6px; }
+
+        /* Group Selection (multi-group mode only) */
         .welcome-header { text-align:center; padding:24px 0 28px; }
         .welcome-title { font-family:'Playfair Display',serif; font-size:24px; color:#f0ece4; margin-bottom:6px; }
         .welcome-sub { font-size:13px; color:#666; letter-spacing:1px; }
@@ -295,12 +347,12 @@ export default function Home() {
         }
         .photo-item.selected { border-color:#c9a84c; }
         .photo-item.max-reached { opacity:0.5; }
-        .photo-item img { width:100%; height:100%; object-fit:cover; transition:transform 0.3s ease; }
+        .photo-item img { width:100%; height:100%; object-fit:cover; transition:transform 0.3s ease, opacity 0.4s ease; opacity:0; }
+        .photo-item img.loaded { opacity:1; }
         .photo-item:hover img { transform:scale(1.04); }
         .photo-circle {
           position:absolute; top:8px; right:8px; width:24px; height:24px;
-          border-radius:50%; border:2px solid rgba(255,255,255,0.7); display:none;
-          background:rgba(0,0,0,0.3);
+          border-radius:50%; border:2px solid rgba(255,255,255,0.7); display:none; background:rgba(0,0,0,0.3);
         }
         .select-mode .photo-circle { display:block; }
         .photo-check {
@@ -310,21 +362,19 @@ export default function Home() {
         }
         .photo-item.selected .photo-check { display:flex; }
         .photo-item.selected .photo-circle { display:none; }
-        .photo-num {
-          position:absolute; bottom:6px; left:8px;
-          font-size:10px; color:rgba(255,255,255,0.5); font-family:'Sarabun',sans-serif;
+        .dl-badge {
+          position:absolute; bottom:6px; right:6px;
+          background:rgba(46,160,90,0.92); color:#fff; font-size:10px; font-weight:600;
+          padding:2px 7px; border-radius:10px;
         }
+        .photo-num { position:absolute; bottom:6px; left:8px; font-size:10px; color:rgba(255,255,255,0.55); }
 
         /* Pagination */
-        .pagination {
-          display:flex; align-items:center; justify-content:center;
-          gap:6px; padding:20px 0 100px; flex-wrap:wrap;
-        }
+        .pagination { display:flex; align-items:center; justify-content:center; gap:6px; padding:20px 0 110px; flex-wrap:wrap; }
         .page-btn {
           width:38px; height:38px; border-radius:50%; border:1px solid rgba(255,255,255,0.15);
           background:rgba(255,255,255,0.05); color:#f0ece4; cursor:pointer;
-          font-family:'Sarabun',sans-serif; font-size:13px; display:flex; align-items:center; justify-content:center;
-          transition:all 0.2s;
+          font-family:'Sarabun',sans-serif; font-size:13px; display:flex; align-items:center; justify-content:center; transition:all 0.2s;
         }
         .page-btn:hover:not(:disabled) { border-color:#c9a84c; color:#c9a84c; }
         .page-btn.active { background:#c9a84c; border-color:#c9a84c; color:#000; font-weight:700; }
@@ -336,26 +386,26 @@ export default function Home() {
         .max-alert {
           position:fixed; top:80px; left:50%; transform:translateX(-50%);
           background:#c9a84c; color:#000; padding:10px 20px; border-radius:24px;
-          font-size:13px; font-weight:700; z-index:200;
-          animation:fadeInOut 2.5s ease forwards; white-space:nowrap;
+          font-size:13px; font-weight:700; z-index:200; animation:fadeInOut 2.5s ease forwards; white-space:nowrap;
         }
         @keyframes fadeInOut {
           0% { opacity:0; transform:translateX(-50%) translateY(-10px); }
           15% { opacity:1; transform:translateX(-50%) translateY(0); }
-          75% { opacity:1; }
-          100% { opacity:0; }
+          75% { opacity:1; } 100% { opacity:0; }
         }
 
         /* Select Bar */
         .select-bar {
           position:fixed; bottom:0; left:0; right:0; z-index:50;
           background:#151515; border-top:1px solid rgba(255,255,255,0.1);
-          padding:12px 16px; display:flex; align-items:center; gap:10px;
-          backdrop-filter:blur(12px);
+          padding:10px 14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; backdrop-filter:blur(12px);
         }
-        .select-info { flex:1; min-width:0; }
+        .select-info { flex:1; min-width:120px; }
         .select-count { font-size:14px; font-weight:600; color:#c9a84c; }
         .select-limit { font-size:11px; color:#666; margin-top:1px; }
+        .size-toggle { display:flex; background:rgba(255,255,255,0.06); border-radius:18px; padding:3px; }
+        .size-opt { border:none; background:transparent; color:#aaa; font-family:'Sarabun',sans-serif; font-size:11px; padding:6px 11px; border-radius:15px; cursor:pointer; white-space:nowrap; }
+        .size-opt.active { background:#c9a84c; color:#000; font-weight:700; }
         .sel-btn {
           background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
           color:#f0ece4; padding:9px 14px; border-radius:20px; cursor:pointer;
@@ -377,12 +427,12 @@ export default function Home() {
           position:fixed; inset:0; background:rgba(0,0,0,0.96); z-index:100;
           display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px;
         }
-        .lightbox-img { max-width:100%; max-height:75vh; border-radius:8px; object-fit:contain; }
+        .lightbox-img { max-width:100%; max-height:70vh; border-radius:8px; object-fit:contain; }
         .lightbox-counter { font-size:12px; color:#666; margin-top:8px; }
-        .lightbox-actions { display:flex; gap:10px; margin-top:14px; }
+        .lightbox-actions { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; justify-content:center; }
         .lb-btn {
           background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15);
-          color:#f0ece4; padding:10px 22px; border-radius:24px; cursor:pointer;
+          color:#f0ece4; padding:10px 20px; border-radius:24px; cursor:pointer;
           font-family:'Sarabun',sans-serif; font-size:13px; text-decoration:none; display:inline-block;
         }
         .lb-btn.primary { background:#c9a84c; border-color:#c9a84c; color:#000; font-weight:600; }
@@ -427,11 +477,11 @@ export default function Home() {
           {lightbox < photos.length - 1 && (
             <button className="lightbox-nav next" onClick={e => { e.stopPropagation(); setLightbox(lightbox + 1); }}>›</button>
           )}
-          <img className="lightbox-img" src={getFullUrl(photos[lightbox])} alt="" onClick={e => e.stopPropagation()} />
+          <img className="lightbox-img" src={getViewUrl(photos[lightbox])} alt="" onClick={e => e.stopPropagation()} />
           <div className="lightbox-counter">{lightbox + 1} / {photos.length}</div>
           <div className="lightbox-actions" onClick={e => e.stopPropagation()}>
-            <a className="lb-btn primary" href={getDownloadUrl(photos[lightbox])} download>⬇ บันทึกรูปนี้</a>
-            <button className="lb-btn" onClick={() => setLightbox(null)}>ปิด</button>
+            <button className="lb-btn primary" onClick={() => downloadOne(photos[lightbox], 'full')}>⬇ ขนาดเต็ม</button>
+            <button className="lb-btn" onClick={() => downloadOne(photos[lightbox], 'social')}>📱 ขนาดโซเชียล</button>
           </div>
         </div>
       )}
@@ -439,18 +489,19 @@ export default function Home() {
       <div className="header">
         {selectedSubfolder && <button className="back-btn" onClick={backToSubfolders}>← กลับ</button>}
         {selectedFolder && !selectedSubfolder && <button className="back-btn" onClick={backToAlbums}>← กลับ</button>}
-        {selectedGroup && !selectedFolder && <button className="back-btn" onClick={backToGroups}>← กลับ</button>}
+        {!SINGLE_GROUP_MODE && selectedGroup && !selectedFolder && <button className="back-btn" onClick={backToGroups}>← กลับ</button>}
         <div className="logo">NT <span>Photo</span></div>
         <div className="tagline">
           {selectedSubfolder ? selectedSubfolder.name :
            selectedFolder ? selectedFolder.name :
-           selectedGroup ? selectedGroup.name : 'ภาพถ่ายกิจกรรม'}
+           (SINGLE_GROUP_MODE ? 'NUMTHON Event Gallery' :
+            selectedGroup ? selectedGroup.name : 'ภาพถ่ายกิจกรรม')}
         </div>
       </div>
 
       <div className="container">
-        {/* Step 1: Group selection */}
-        {!selectedGroup && (
+        {/* Step 1: Group selection (only when multi-group mode) */}
+        {!SINGLE_GROUP_MODE && !selectedGroup && (
           <>
             <div className="welcome-header">
               <div className="welcome-title">เลือกกลุ่มของคุณ</div>
@@ -468,9 +519,18 @@ export default function Home() {
           </>
         )}
 
-        {/* Step 2: Album list */}
-        {selectedGroup && !selectedFolder && (
+        {/* Step 2: Album list — landing screen in single-group mode (with premium hero) */}
+        {atAlbumList && (
           <>
+            {SINGLE_GROUP_MODE && (
+              <div className="hero">
+                <div className="hero-kicker">นำทอง · Event Gallery</div>
+                <div className="hero-title">{FEATURED_GROUP.name} <span>Photo Gallery</span></div>
+                <div className="hero-divider" />
+                <div className="hero-sub">รวมภาพบรรยากาศกิจกรรมสำหรับทีม {FEATURED_GROUP.name}</div>
+                <div className="hero-help">เลือกภาพที่ต้องการ แล้วดาวน์โหลดได้ทันที</div>
+              </div>
+            )}
             <div className="section-title">📁 เลือกงาน / อัลบั้ม</div>
             {loadingFolders ? (
               <div className="loading"><div className="spinner"/><div>กำลังโหลด...</div></div>
@@ -518,7 +578,7 @@ export default function Home() {
               </div>
               {photos.length > 0 && !loading && (
                 <button className="select-toggle-btn" onClick={() => selectMode ? cancelSelect() : setSelectMode(true)}>
-                  {selectMode ? '✕ ยกเลิก' : '☑ เลือกรูป'}
+                  {selectMode ? '✕ ยกเลิก' : '☑ เลือกหลายรูป'}
                 </button>
               )}
             </div>
@@ -538,15 +598,24 @@ export default function Home() {
                   {pagePhotos.map((photo, i) => {
                     const isSelected = selected.has(photo.id);
                     const isDisabled = atMax && !isSelected;
+                    const isDone = downloaded.has(photo.id);
                     return (
                       <div
                         key={photo.id}
                         className={`photo-item ${isSelected ? 'selected' : ''} ${isDisabled ? 'max-reached' : ''}`}
                         onClick={() => handlePhotoTap(photo, i)}
                       >
-                        <img src={getImageUrl(photo)} alt={photo.name} loading="lazy" />
+                        <img
+                          src={getThumbUrl(photo)}
+                          alt={photo.name}
+                          loading="lazy"
+                          decoding="async"
+                          onLoad={e => e.currentTarget.classList.add('loaded')}
+                          onError={e => e.currentTarget.classList.add('loaded')}
+                        />
                         <div className="photo-circle"/>
                         <div className="photo-check">✓</div>
+                        {isDone && !selectMode && <div className="dl-badge">✓ บันทึกแล้ว</div>}
                         <div className="photo-num">{pageStart + i + 1}</div>
                       </div>
                     );
@@ -563,7 +632,7 @@ export default function Home() {
                     <button className="page-btn arrow" onClick={() => changePage(totalPages)} disabled={currentPage === totalPages}>»</button>
                   </div>
                 )}
-                {totalPages <= 1 && <div style={{paddingBottom: selectMode ? 90 : 20}} />}
+                {totalPages <= 1 && <div style={{paddingBottom: selectMode ? 110 : 20}} />}
               </>
             )}
           </>
@@ -575,6 +644,10 @@ export default function Home() {
           <div className="select-info">
             <div className="select-count">{selected.size > 0 ? `เลือก ${selected.size} รูป` : 'แตะรูปเพื่อเลือก'}</div>
             <div className="select-limit">{selected.size}/{MAX_SELECT} รูป</div>
+          </div>
+          <div className="size-toggle">
+            <button className={`size-opt ${dlSize === 'full' ? 'active' : ''}`} onClick={() => setDlSize('full')}>ขนาดเต็ม</button>
+            <button className={`size-opt ${dlSize === 'social' ? 'active' : ''}`} onClick={() => setDlSize('social')}>โซเชียล</button>
           </div>
           <button className="sel-btn" onClick={selectAllPage}>
             {allPageSelected ? 'ยกเลิกหน้านี้' : 'เลือกหน้านี้'}
