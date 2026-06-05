@@ -337,6 +337,13 @@ export default function Home() {
         .folder-icon { font-size:32px; margin-bottom:8px; }
         .folder-name { font-size:13px; font-weight:600; color:#f0ece4; line-height:1.4; }
 
+        /* Album cover (POSTER.JPG) */
+        .folder-card.cover { padding:0; position:relative; aspect-ratio:4/3; overflow:hidden; display:flex; align-items:flex-end; background:linear-gradient(135deg,#1a1a1a,#141414); }
+        .folder-cover-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:transform 0.3s ease; }
+        .folder-card.cover:hover .folder-cover-img { transform:scale(1.05); }
+        .folder-cover-grad { position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.32) 45%, rgba(0,0,0,0) 100%); }
+        .folder-card.cover .folder-name { position:relative; z-index:1; width:100%; padding:12px 12px 11px; text-align:left; color:#fff; text-shadow:0 1px 5px rgba(0,0,0,0.85); }
+
         /* Toolbar */
         .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
         .folder-header { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
@@ -562,9 +569,19 @@ export default function Home() {
             ) : (
               <div className="folder-grid">
                 {folders.map(folder => (
-                  <div key={folder.id} className="folder-card" onClick={() => openFolder(folder)}>
-                    <div className="folder-icon">📸</div>
-                    <div className="folder-name">{folder.name}</div>
+                  <div key={folder.id} className={`folder-card ${folder.coverId ? 'cover' : ''}`} onClick={() => openFolder(folder)}>
+                    {folder.coverId ? (
+                      <>
+                        <img className="folder-cover-img" src={`https://drive.google.com/thumbnail?id=${folder.coverId}&sz=w800`} alt={folder.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                        <div className="folder-cover-grad" />
+                        <div className="folder-name">{folder.name}</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="folder-icon">📸</div>
+                        <div className="folder-name">{folder.name}</div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -581,9 +598,19 @@ export default function Home() {
             ) : (
               <div className="folder-grid">
                 {subfolders.map(sf => (
-                  <div key={sf.id} className="folder-card" onClick={() => openSubfolder(sf)}>
-                    <div className="folder-icon">📁</div>
-                    <div className="folder-name">{sf.name}</div>
+                  <div key={sf.id} className={`folder-card ${sf.coverId ? 'cover' : ''}`} onClick={() => openSubfolder(sf)}>
+                    {sf.coverId ? (
+                      <>
+                        <img className="folder-cover-img" src={`https://drive.google.com/thumbnail?id=${sf.coverId}&sz=w800`} alt={sf.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                        <div className="folder-cover-grad" />
+                        <div className="folder-name">{sf.name}</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="folder-icon">📁</div>
+                        <div className="folder-name">{sf.name}</div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
