@@ -327,22 +327,28 @@ export default function Home() {
         .group-sub { font-size:10px; color:#c9a84c; letter-spacing:2px; text-transform:uppercase; }
 
         /* Folder grid */
-        .folder-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+        .folder-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:18px; }
         .folder-card {
           background:linear-gradient(135deg,#1a1a1a,#141414);
-          border:1px solid rgba(255,255,255,0.08); border-radius:14px;
+          border:1px solid rgba(255,255,255,0.08); border-radius:16px;
           padding:22px 14px; text-align:center; cursor:pointer; transition:all 0.25s ease;
+          aspect-ratio:4/3; display:flex; flex-direction:column; align-items:center; justify-content:center;
         }
         .folder-card:hover { border-color:#c9a84c; transform:translateY(-3px); box-shadow:0 8px 32px rgba(201,168,76,0.15); }
-        .folder-icon { font-size:32px; margin-bottom:8px; }
-        .folder-name { font-size:13px; font-weight:600; color:#f0ece4; line-height:1.4; }
+        .folder-icon { font-size:48px; margin-bottom:10px; }
+        .folder-name { font-size:14px; font-weight:600; color:#f0ece4; line-height:1.4; }
 
-        /* Album cover (POSTER.JPG) */
-        .folder-card.cover { padding:0; position:relative; aspect-ratio:4/3; overflow:hidden; display:flex; align-items:flex-end; background:linear-gradient(135deg,#1a1a1a,#141414); }
-        .folder-cover-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; transition:transform 0.3s ease; }
-        .folder-card.cover:hover .folder-cover-img { transform:scale(1.05); }
-        .folder-cover-grad { position:absolute; inset:0; background:linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.32) 45%, rgba(0,0,0,0) 100%); }
-        .folder-card.cover .folder-name { position:relative; z-index:1; width:100%; padding:12px 12px 11px; text-align:left; color:#fff; text-shadow:0 1px 5px rgba(0,0,0,0.85); }
+        /* Album cover (POSTER.JPG) — large cinematic poster card */
+        .folder-card.cover {
+          padding:0; position:relative; aspect-ratio:4/3; overflow:hidden;
+          display:flex; flex-direction:column; justify-content:flex-end;
+          background:radial-gradient(circle at 50% 38%, #171717 0%, #0a0a0a 100%);
+          border:1px solid rgba(201,168,76,0.38); box-shadow:0 10px 34px rgba(0,0,0,0.55);
+        }
+        .folder-cover-img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+        .folder-card.cover:hover { border-color:#c9a84c; transform:translateY(-4px); box-shadow:0 16px 46px rgba(201,168,76,0.25); }
+        .folder-cover-grad { position:absolute; left:0; right:0; bottom:0; height:50%; background:linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 42%, rgba(0,0,0,0) 100%); }
+        .folder-card.cover .folder-name { position:relative; z-index:1; width:100%; padding:14px; text-align:left; font-size:15px; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,0.95); }
 
         /* Toolbar */
         .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
