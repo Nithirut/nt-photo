@@ -340,8 +340,8 @@ export default function Home() {
         /* Toolbar */
         .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
         .folder-header { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
-        .folder-title { font-family:'Playfair Display',serif; font-size:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .photo-count { background:rgba(201,168,76,0.2); color:#c9a84c; border-radius:20px; padding:3px 10px; font-size:11px; font-weight:600; white-space:nowrap; }
+        .folder-title { font-family:'NTLocalFont','Sarabun',sans-serif; font-size:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .photo-count { background:rgba(201,168,76,0.2); color:#c9a84c; border-radius:20px; padding:3px 10px; font-size:11px; font-weight:600; white-space:nowrap; font-family:'NTLocalFont','Sarabun',sans-serif; }
         .select-toggle-btn {
           background:rgba(201,168,76,0.15); border:1px solid rgba(201,168,76,0.4);
           color:#c9a84c; padding:7px 14px; border-radius:20px; cursor:pointer;
