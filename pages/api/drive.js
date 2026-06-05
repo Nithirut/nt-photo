@@ -23,7 +23,35 @@ export default async function handler(req, res) {
         orderBy: 'createdTime desc',
         pageSize: 50,
       });
-      return res.status(200).json({ folders: response.data.files || [] });
+      const folders = response.data.files || [];
+
+      // Album cover: if a folder contains a POSTER image, attach its fileId as coverId.
+      // One batched query for all folders; wrapped in try/catch so covers never break folder listing.
+      if (folders.length > 0) {
+        try {
+          const parentClause = folders.map(f => `'${f.id}' in parents`).join(' or ');
+          const posterNames = ['POSTER.JPG','poster.jpg','Poster.jpg','POSTER.jpg','Poster.JPG','poster.JPG','POSTER.PNG','poster.png','Poster.png'];
+          const nameClause = posterNames.map(n => `name='${n}'`).join(' or ');
+          const posterRes = await drive.files.list({
+            q: `(${parentClause}) and (${nameClause}) and mimeType contains 'image/' and trashed=false`,
+            fields: 'files(id, name, parents)',
+            pageSize: 100,
+          });
+          const coverByParent = {};
+          for (const p of (posterRes.data.files || [])) {
+            for (const par of (p.parents || [])) {
+              if (!coverByParent[par]) coverByParent[par] = p.id;
+            }
+          }
+          for (const f of folders) {
+            if (coverByParent[f.id]) f.coverId = coverByParent[f.id];
+          }
+        } catch (coverErr) {
+          console.error('Album cover lookup failed (continuing without covers):', coverErr);
+        }
+      }
+
+      return res.status(200).json({ folders });
     }
 
     if (type === 'photos' && folderId) {
@@ -33,7 +61,13 @@ export default async function handler(req, res) {
         pageSize: 200,
         orderBy: 'createdTime desc',
       });
-      return res.status(200).json({ photos: response.data.files || [] });
+      // Exclude POSTER cover files from the gallery (case-insensitive) so they are
+      // never counted or shown for download.
+      const photos = (response.data.files || []).filter(p => {
+        const n = (p.name || '').trim().toLowerCase();
+        return n !== 'poster.jpg' && n !== 'poster.jpeg' && n !== 'poster.png';
+      });
+      return res.status(200).json({ photos });
     }
 
     return res.status(400).json({ error: 'Invalid request' });
