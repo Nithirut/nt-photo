@@ -527,7 +527,7 @@ export default function Home() {
                 <div className="hero-kicker">นำทอง · Event Gallery</div>
                 <div className="hero-title">{FEATURED_GROUP.name} <span>Photo Gallery</span></div>
                 <div className="hero-divider" />
-                <div className="hero-sub">รวมภาพบรรยากาศกิจกรรมสำหรับทีม {FEATURED_GROUP.name}</div>
+                <div className="hero-sub">รวมภาพบรรยากาศกิจกรรม</div>
                 <div className="hero-help">เลือกภาพที่ต้องการ แล้วดาวน์โหลดได้ทันที</div>
               </div>
             )}
