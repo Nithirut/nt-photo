@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 
+// NUMTHONG rescue mode: supports ?size=social for resized (~1080px) downloads
 export default async function handler(req, res) {
   const { fileId, size } = req.query;
   if (!fileId) return res.status(400).json({ error: 'No fileId' });
