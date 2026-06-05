@@ -273,8 +273,10 @@ export default function Home() {
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet" />
       </Head>
       <style>{`
+        @font-face { font-family:'NTLocalFont'; src:url('/fonts/NotoSansThai-Regular.ttf') format('truetype'); font-weight:400; font-style:normal; font-display:swap; }
+        @font-face { font-family:'NTLocalFont'; src:url('/fonts/NotoSansThai-Bold.ttf') format('truetype'); font-weight:700; font-style:normal; font-display:swap; }
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { background:#0a0a0a; color:#f0ece4; font-family:'Sarabun',sans-serif; min-height:100vh; }
+        body { background:#0a0a0a; color:#f0ece4; font-family:'NTLocalFont','Sarabun',sans-serif; min-height:100vh; }
         .header {
           background:linear-gradient(180deg,#111 0%,transparent 100%);
           padding:24px 20px 16px; text-align:center; position:sticky; top:0; z-index:10;
@@ -287,7 +289,7 @@ export default function Home() {
           position:absolute; left:16px; top:50%; transform:translateY(-50%);
           background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12);
           color:#f0ece4; padding:7px 14px; border-radius:20px; cursor:pointer;
-          font-size:12px; font-family:'Sarabun',sans-serif;
+          font-size:12px; font-family:'NTLocalFont','Sarabun',sans-serif;
         }
         .container { padding:18px 14px; max-width:1200px; margin:0 auto; }
         .section-title { font-family:'Playfair Display',serif; font-size:13px; color:#c9a84c; letter-spacing:4px; text-transform:uppercase; margin-bottom:16px; }
@@ -343,7 +345,7 @@ export default function Home() {
         .select-toggle-btn {
           background:rgba(201,168,76,0.15); border:1px solid rgba(201,168,76,0.4);
           color:#c9a84c; padding:7px 14px; border-radius:20px; cursor:pointer;
-          font-family:'Sarabun',sans-serif; font-size:12px; font-weight:600; white-space:nowrap;
+          font-family:'NTLocalFont','Sarabun',sans-serif; font-size:12px; font-weight:600; white-space:nowrap;
         }
 
         /* Photo Grid */
@@ -382,7 +384,7 @@ export default function Home() {
         .page-btn {
           width:38px; height:38px; border-radius:50%; border:1px solid rgba(255,255,255,0.15);
           background:rgba(255,255,255,0.05); color:#f0ece4; cursor:pointer;
-          font-family:'Sarabun',sans-serif; font-size:13px; display:flex; align-items:center; justify-content:center; transition:all 0.2s;
+          font-family:'NTLocalFont','Sarabun',sans-serif; font-size:13px; display:flex; align-items:center; justify-content:center; transition:all 0.2s;
         }
         .page-btn:hover:not(:disabled) { border-color:#c9a84c; color:#c9a84c; }
         .page-btn.active { background:#c9a84c; border-color:#c9a84c; color:#000; font-weight:700; }
@@ -412,12 +414,12 @@ export default function Home() {
         .select-count { font-size:14px; font-weight:600; color:#c9a84c; }
         .select-limit { font-size:11px; color:#666; margin-top:1px; }
         .size-toggle { display:flex; background:rgba(255,255,255,0.06); border-radius:18px; padding:3px; }
-        .size-opt { border:none; background:transparent; color:#aaa; font-family:'Sarabun',sans-serif; font-size:11px; padding:6px 11px; border-radius:15px; cursor:pointer; white-space:nowrap; }
+        .size-opt { border:none; background:transparent; color:#aaa; font-family:'NTLocalFont','Sarabun',sans-serif; font-size:11px; padding:6px 11px; border-radius:15px; cursor:pointer; white-space:nowrap; }
         .size-opt.active { background:#c9a84c; color:#000; font-weight:700; }
         .sel-btn {
           background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
           color:#f0ece4; padding:9px 14px; border-radius:20px; cursor:pointer;
-          font-family:'Sarabun',sans-serif; font-size:12px; white-space:nowrap;
+          font-family:'NTLocalFont','Sarabun',sans-serif; font-size:12px; white-space:nowrap;
         }
         .sel-btn.primary { background:#c9a84c; border-color:#c9a84c; color:#000; font-weight:700; }
         .sel-btn:disabled { opacity:0.35; cursor:not-allowed; }
@@ -441,7 +443,7 @@ export default function Home() {
         .lb-btn {
           background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.15);
           color:#f0ece4; padding:10px 20px; border-radius:24px; cursor:pointer;
-          font-family:'Sarabun',sans-serif; font-size:13px; text-decoration:none; display:inline-block;
+          font-family:'NTLocalFont','Sarabun',sans-serif; font-size:13px; text-decoration:none; display:inline-block;
         }
         .lb-btn.primary { background:#c9a84c; border-color:#c9a84c; color:#000; font-weight:600; }
         .lightbox-close {
