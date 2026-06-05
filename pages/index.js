@@ -453,6 +453,7 @@ export default function Home() {
         .spinner { width:34px; height:34px; border:2px solid #333; border-top-color:#c9a84c; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 14px; }
         @keyframes spin { to { transform:rotate(360deg); } }
         .empty { text-align:center; padding:60px 20px; color:#555; font-size:14px; }
+        .app-footer { text-align:center; padding:26px 16px 40px; color:#6b6456; font-size:11px; letter-spacing:1px; border-top:1px solid rgba(255,255,255,0.05); margin-top:24px; }
       `}</style>
 
       {maxAlert && <div className="max-alert">⚠️ เลือกได้สูงสุด {MAX_SELECT} รูปต่อครั้ง</div>}
@@ -638,6 +639,8 @@ export default function Home() {
           </>
         )}
       </div>
+
+      <div className="app-footer">Created by Nithirut Chirathiraphat NT 866</div>
 
       {selectMode && (
         <div className="select-bar">
