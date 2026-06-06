@@ -20,15 +20,12 @@ const FEATURED_GROUP = GROUPS.find(g => g.id === 'numthong');
 
 export default function Home() {
   const [selectedGroup, setSelectedGroup] = useState(null);
-  const [folders, setFolders] = useState([]);
-  const [selectedFolder, setSelectedFolder] = useState(null);
-  const [subfolders, setSubfolders] = useState([]);
-  const [selectedSubfolder, setSelectedSubfolder] = useState(null);
-  const [loadingSubfolders, setLoadingSubfolders] = useState(false);
+  const [path, setPath] = useState([]);        // navigation stack: folder nodes inside the group
+  const [folders, setFolders] = useState([]);  // folder cards at the current level
+  const [mode, setMode] = useState(null);      // 'folders' | 'photos'
   const [photos, setPhotos] = useState([]);
   const [lightbox, setLightbox] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [loadingFolders, setLoadingFolders] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [selectMode, setSelectMode] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -64,87 +61,69 @@ export default function Home() {
     });
   };
 
+  // Generic nested navigation: load a folder level — show its subfolders if any, else its photos.
+  // Works for unlimited depth (group → album → subfolder → subfolder → ... → photos).
+  const loadLevel = async (folderId) => {
+    setLoading(true);
+    setMode(null);
+    setFolders([]);
+    setPhotos([]);
+    setSelectMode(false);
+    setSelected(new Set());
+    setCurrentPage(1);
+    setMaxAlert(false);
+    try {
+      const fRes = await fetch(`/api/drive?type=folders&groupFolderId=${folderId}`);
+      const fData = await fRes.json();
+      const subs = fData.folders || [];
+      if (subs.length > 0) {
+        setFolders(subs);
+        setMode('folders');
+      } else {
+        const pRes = await fetch(`/api/drive?type=photos&folderId=${folderId}`);
+        const pData = await pRes.json();
+        setPhotos(pData.photos || []);
+        setMode('photos');
+      }
+    } catch (e) {
+      setPhotos([]);
+      setMode('photos');
+    }
+    setLoading(false);
+  };
+
   const openGroup = (group) => {
     setSelectedGroup(group);
-    setFolders([]);
-    setLoadingFolders(true);
-    fetch(`/api/drive?type=folders&groupFolderId=${group.folderId}`)
-      .then(r => r.json())
-      .then(data => { setFolders(data.folders || []); setLoadingFolders(false); })
-      .catch(() => setLoadingFolders(false));
+    setPath([]);
+    loadLevel(group.folderId);
   };
 
-  const backToGroups = () => {
-    setSelectedGroup(null);
-    setFolders([]);
-    setSelectedFolder(null);
-    setSubfolders([]);
-    setSelectedSubfolder(null);
-    setLoadingSubfolders(false);
-    setPhotos([]);
-    setSelectMode(false);
-    setSelected(new Set());
-    setCurrentPage(1);
-    setMaxAlert(false);
+  // Click any folder card at any depth — push onto the stack and load its level.
+  const openNode = (folder) => {
+    setPath(prev => [...prev, { id: folder.id, name: folder.name }]);
+    loadLevel(folder.id);
   };
 
-  const openFolder = async (folder) => {
-    setSelectedFolder(folder);
-    setSubfolders([]);
-    setSelectedSubfolder(null);
-    setPhotos([]);
-    setSelected(new Set());
-    setSelectMode(false);
-    setLoading(false);
-    setCurrentPage(1);
-    setMaxAlert(false);
-    setLoadingSubfolders(true);
-
-    const sfRes = await fetch(`/api/drive?type=folders&groupFolderId=${folder.id}`);
-    const sfData = await sfRes.json();
-    const sf = sfData.folders || [];
-    setLoadingSubfolders(false);
-
-    if (sf.length > 0) {
-      setSubfolders(sf);
+  // Breadcrumb jump: index === -1 → group root (album list); otherwise jump to path[index].
+  const goToDepth = (index) => {
+    if (index < 0) {
+      setPath([]);
+      if (selectedGroup) loadLevel(selectedGroup.folderId);
     } else {
-      setLoading(true);
-      const res = await fetch(`/api/drive?type=photos&folderId=${folder.id}`);
-      const data = await res.json();
-      setPhotos(data.photos || []);
-      setLoading(false);
+      const node = path[index];
+      setPath(path.slice(0, index + 1));
+      loadLevel(node.id);
     }
   };
 
-  const openSubfolder = async (subfolder) => {
-    setSelectedSubfolder(subfolder);
-    setPhotos([]);
-    setSelected(new Set());
-    setSelectMode(false);
-    setLoading(true);
-    setCurrentPage(1);
-    setMaxAlert(false);
-    const res = await fetch(`/api/drive?type=photos&folderId=${subfolder.id}`);
-    const data = await res.json();
-    setPhotos(data.photos || []);
-    setLoading(false);
-  };
+  const back = () => goToDepth(path.length - 2);
 
-  const backToSubfolders = () => {
-    setSelectedSubfolder(null);
+  const backToGroups = () => {
+    setSelectedGroup(null);
+    setPath([]);
+    setFolders([]);
     setPhotos([]);
-    setSelectMode(false);
-    setSelected(new Set());
-    setCurrentPage(1);
-    setMaxAlert(false);
-  };
-
-  const backToAlbums = () => {
-    setSelectedFolder(null);
-    setSubfolders([]);
-    setSelectedSubfolder(null);
-    setLoadingSubfolders(false);
-    setPhotos([]);
+    setMode(null);
     setSelectMode(false);
     setSelected(new Set());
     setCurrentPage(1);
@@ -252,8 +231,9 @@ export default function Home() {
   const allPageSelected = pagePhotos.length > 0 && pagePhotos.every(p => selected.has(p.id));
   const atMax = selected.size >= MAX_SELECT;
 
-  // In single-group mode the album list is the landing screen (no group picker, no back-to-groups)
-  const atAlbumList = selectedGroup && !selectedFolder;
+  // Root = group landing (album list). Current folder name = last node in the path stack.
+  const atRoot = selectedGroup && path.length === 0;
+  const currentFolderName = path.length ? path[path.length - 1].name : null;
 
   const getPageNumbers = () => {
     if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -293,6 +273,14 @@ export default function Home() {
         }
         .container { padding:18px 14px; max-width:1200px; margin:0 auto; }
         .section-title { font-family:'Playfair Display',serif; font-size:13px; color:#c9a84c; letter-spacing:4px; text-transform:uppercase; margin-bottom:16px; }
+
+        /* Breadcrumb (nested navigation) */
+        .breadcrumb { display:flex; flex-wrap:wrap; align-items:center; gap:3px; margin-bottom:18px; font-size:12px; line-height:1.6; }
+        .crumb { color:#c9a84c; cursor:pointer; white-space:nowrap; }
+        .crumb:hover { text-decoration:underline; }
+        .crumb.current { color:#f0ece4; cursor:default; }
+        .crumb.current:hover { text-decoration:none; }
+        .crumb-sep { color:#555; margin:0 3px; }
 
         /* Premium event hero */
         .hero { text-align:center; padding:26px 16px 24px; }
@@ -511,13 +499,11 @@ export default function Home() {
       )}
 
       <div className="header">
-        {selectedSubfolder && <button className="back-btn" onClick={backToSubfolders}>← กลับ</button>}
-        {selectedFolder && !selectedSubfolder && <button className="back-btn" onClick={backToAlbums}>← กลับ</button>}
-        {!SINGLE_GROUP_MODE && selectedGroup && !selectedFolder && <button className="back-btn" onClick={backToGroups}>← กลับ</button>}
+        {selectedGroup && path.length > 0 && <button className="back-btn" onClick={back}>← กลับ</button>}
+        {!SINGLE_GROUP_MODE && selectedGroup && path.length === 0 && <button className="back-btn" onClick={backToGroups}>← กลับ</button>}
         <div className="logo">NT <span>Photo</span></div>
         <div className="tagline">
-          {selectedSubfolder ? selectedSubfolder.name :
-           selectedFolder ? selectedFolder.name :
+          {currentFolderName ? currentFolderName :
            (SINGLE_GROUP_MODE ? 'NUMTHONG Event Gallery' :
             selectedGroup ? selectedGroup.name : 'ภาพถ่ายกิจกรรม')}
         </div>
@@ -543,39 +529,57 @@ export default function Home() {
           </>
         )}
 
-        {/* Step 2: Album list — landing screen in single-group mode (with premium hero) */}
-        {atAlbumList && (
+        {/* Breadcrumb (shown once navigated into folders) */}
+        {selectedGroup && path.length > 0 && (
+          <div className="breadcrumb">
+            <span className="crumb" onClick={() => goToDepth(-1)}>🏠 {SINGLE_GROUP_MODE ? FEATURED_GROUP.name : selectedGroup.name}</span>
+            {path.map((node, i) => (
+              <span key={node.id}>
+                <span className="crumb-sep">›</span>
+                <span className={`crumb ${i === path.length - 1 ? 'current' : ''}`} onClick={() => goToDepth(i)}>{node.name}</span>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Hero + how-to: only on the group landing (root) */}
+        {atRoot && SINGLE_GROUP_MODE && (
           <>
-            {SINGLE_GROUP_MODE && (
-              <div className="hero">
-                <div className="hero-kicker">นำทอง · Event Gallery</div>
-                <div className="hero-title">{FEATURED_GROUP.name} <span>Photo Gallery</span></div>
-                <div className="hero-divider" />
-                <div className="hero-sub">รวมภาพบรรยากาศกิจกรรม</div>
-                <div className="hero-help">เลือกภาพที่ต้องการ แล้วดาวน์โหลดได้ทันที</div>
+            <div className="hero">
+              <div className="hero-kicker">นำทอง · Event Gallery</div>
+              <div className="hero-title">{FEATURED_GROUP.name} <span>Photo Gallery</span></div>
+              <div className="hero-divider" />
+              <div className="hero-sub">รวมภาพบรรยากาศกิจกรรม</div>
+              <div className="hero-help">เลือกภาพที่ต้องการ แล้วดาวน์โหลดได้ทันที</div>
+            </div>
+            <div className="howto">
+              <div className="howto-title">วิธีใช้งาน</div>
+              <div className="howto-list">
+                <div className="howto-item"><span className="howto-num">1</span><span>เลือกอัลบั้มกิจกรรม</span></div>
+                <div className="howto-item"><span className="howto-num">2</span><span>แตะรูปเพื่อดูภาพขนาดใหญ่</span></div>
+                <div className="howto-item"><span className="howto-num">3</span><span>กด “เลือกหลายรูป” หากต้องการดาวน์โหลดหลายภาพ</span></div>
+                <div className="howto-item"><span className="howto-num">4</span><span>เลือก “โซเชียล” สำหรับไฟล์เล็ก เหมาะกับ Facebook / LINE / IG</span></div>
               </div>
-            )}
-            {SINGLE_GROUP_MODE && (
-              <div className="howto">
-                <div className="howto-title">วิธีใช้งาน</div>
-                <div className="howto-list">
-                  <div className="howto-item"><span className="howto-num">1</span><span>เลือกอัลบั้มกิจกรรม</span></div>
-                  <div className="howto-item"><span className="howto-num">2</span><span>แตะรูปเพื่อดูภาพขนาดใหญ่</span></div>
-                  <div className="howto-item"><span className="howto-num">3</span><span>กด “เลือกหลายรูป” หากต้องการดาวน์โหลดหลายภาพ</span></div>
-                  <div className="howto-item"><span className="howto-num">4</span><span>เลือก “โซเชียล” สำหรับไฟล์เล็ก เหมาะกับ Facebook / LINE / IG</span></div>
-                </div>
-                <div className="howto-note">บนมือถือ บางเครื่องอาจถามยืนยันการดาวน์โหลดทีละรูป</div>
-              </div>
-            )}
-            <div className="section-title">📁 เลือกงาน / อัลบั้ม</div>
-            {loadingFolders ? (
-              <div className="loading"><div className="spinner"/><div>กำลังโหลด...</div></div>
-            ) : folders.length === 0 ? (
-              <div className="empty">⚠️ ยังไม่มีอัลบั้ม</div>
+              <div className="howto-note">บนมือถือ บางเครื่องอาจถามยืนยันการดาวน์โหลดทีละรูป</div>
+            </div>
+          </>
+        )}
+
+        {/* Loading a level */}
+        {selectedGroup && loading && (
+          <div className="loading"><div className="spinner"/><div>กำลังโหลด...</div></div>
+        )}
+
+        {/* Folder cards (albums / subfolders) — any depth */}
+        {selectedGroup && !loading && mode === 'folders' && (
+          <>
+            <div className="section-title">{path.length === 0 ? '📁 เลือกงาน / อัลบั้ม' : '📂 เลือกหมวดหมู่'}</div>
+            {folders.length === 0 ? (
+              <div className="empty">⚠️ ยังไม่มีโฟลเดอร์</div>
             ) : (
               <div className="folder-grid">
                 {folders.map(folder => (
-                  <div key={folder.id} className={`folder-card ${folder.coverId ? 'cover' : ''}`} onClick={() => openFolder(folder)}>
+                  <div key={folder.id} className={`folder-card ${folder.coverId ? 'cover' : ''}`} onClick={() => openNode(folder)}>
                     {folder.coverId ? (
                       <>
                         <img className="folder-cover-img" src={`https://drive.google.com/thumbnail?id=${folder.coverId}&sz=w800`} alt={folder.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} />
@@ -584,7 +588,7 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        <div className="folder-icon">📸</div>
+                        <div className="folder-icon">{path.length === 0 ? '📸' : '📁'}</div>
                         <div className="folder-name">{folder.name}</div>
                       </>
                     )}
@@ -595,54 +599,23 @@ export default function Home() {
           </>
         )}
 
-        {/* Step 2.5: Subfolders */}
-        {selectedFolder && !selectedSubfolder && (loadingSubfolders || subfolders.length > 0) && (
-          <>
-            <div className="section-title">📂 เลือกหมวดหมู่</div>
-            {loadingSubfolders ? (
-              <div className="loading"><div className="spinner"/><div>กำลังโหลด...</div></div>
-            ) : (
-              <div className="folder-grid">
-                {subfolders.map(sf => (
-                  <div key={sf.id} className={`folder-card ${sf.coverId ? 'cover' : ''}`} onClick={() => openSubfolder(sf)}>
-                    {sf.coverId ? (
-                      <>
-                        <img className="folder-cover-img" src={`https://drive.google.com/thumbnail?id=${sf.coverId}&sz=w800`} alt={sf.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} />
-                        <div className="folder-cover-grad" />
-                        <div className="folder-name">{sf.name}</div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="folder-icon">📁</div>
-                        <div className="folder-name">{sf.name}</div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Step 3: Photos */}
-        {(selectedSubfolder || (selectedFolder && !selectedSubfolder && !loadingSubfolders && subfolders.length === 0)) && (
+        {/* Photos (leaf level) */}
+        {selectedGroup && !loading && mode === 'photos' && (
           <>
             <div className="toolbar">
               <div className="folder-header">
-                <div className="folder-title">{selectedSubfolder ? selectedSubfolder.name : selectedFolder.name}</div>
+                <div className="folder-title">{currentFolderName || (SINGLE_GROUP_MODE ? FEATURED_GROUP.name : selectedGroup.name)}</div>
                 {photos.length > 0 && <span className="photo-count">{photos.length} รูป</span>}
               </div>
-              {photos.length > 0 && !loading && (
+              {photos.length > 0 && (
                 <button className="select-toggle-btn" onClick={() => selectMode ? cancelSelect() : setSelectMode(true)}>
                   {selectMode ? '✕ ยกเลิก' : '☑ เลือกหลายรูป'}
                 </button>
               )}
             </div>
 
-            {loading ? (
-              <div className="loading"><div className="spinner"/><div>กำลังโหลดภาพ...</div></div>
-            ) : photos.length === 0 ? (
-              <div className="empty">📭 ไม่มีภาพในอัลบั้มนี้</div>
+            {photos.length === 0 ? (
+              <div className="empty">📭 ยังไม่มีภาพในอัลบั้มนี้</div>
             ) : (
               <>
                 {totalPages > 1 && (
