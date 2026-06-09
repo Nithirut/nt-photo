@@ -18,6 +18,21 @@ const GROUPS = [
 
 const FEATURED_GROUP = GROUPS.find(g => g.id === 'numthong');
 
+// Custom display order for the MAIN album level only (group root).
+// Folders matching a name appear first, in this order; others keep their original
+// (API) order, placed after. Does NOT affect nested subfolders, POSTER cover, or downloads.
+const MAIN_ALBUM_ORDER = ['Numthong Pattana', 'Phutthatham Numthong', 'FA Numthong'];
+
+const sortMainAlbums = (list) => {
+  const rank = (name) => {
+    const n = (name || '').trim().toLowerCase();
+    const i = MAIN_ALBUM_ORDER.findIndex(x => x.toLowerCase() === n);
+    return i === -1 ? Infinity : i;
+  };
+  // Array.prototype.sort is stable, so equal ranks (incl. unlisted) keep original order.
+  return [...list].sort((a, b) => rank(a.name) - rank(b.name));
+};
+
 export default function Home() {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [path, setPath] = useState([]);        // navigation stack: folder nodes inside the group
@@ -64,7 +79,7 @@ export default function Home() {
 
   // Generic nested navigation: load a folder level — show its subfolders if any, else its photos.
   // Works for unlimited depth (group → album → subfolder → subfolder → ... → photos).
-  const loadLevel = async (folderId) => {
+  const loadLevel = async (folderId, isRoot = false) => {
     setLoading(true);
     setMode(null);
     setFolders([]);
@@ -78,7 +93,8 @@ export default function Home() {
       const fData = await fRes.json();
       const subs = fData.folders || [];
       if (subs.length > 0) {
-        setFolders(subs);
+        // Apply custom album order only at the main album level (group root).
+        setFolders(isRoot ? sortMainAlbums(subs) : subs);
         setMode('folders');
       } else {
         const pRes = await fetch(`/api/drive?type=photos&folderId=${folderId}`);
@@ -96,7 +112,7 @@ export default function Home() {
   const openGroup = (group) => {
     setSelectedGroup(group);
     setPath([]);
-    loadLevel(group.folderId);
+    loadLevel(group.folderId, true);
   };
 
   // Click any folder card at any depth — push onto the stack and load its level.
@@ -109,7 +125,7 @@ export default function Home() {
   const goToDepth = (index) => {
     if (index < 0) {
       setPath([]);
-      if (selectedGroup) loadLevel(selectedGroup.folderId);
+      if (selectedGroup) loadLevel(selectedGroup.folderId, true);
     } else {
       const node = path[index];
       setPath(path.slice(0, index + 1));
