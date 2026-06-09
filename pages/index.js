@@ -28,8 +28,9 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [selectMode, setSelectMode] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
+  // Download Tray: mobile-safe multi-download (each download = a real user tap)
+  const [trayOpen, setTrayOpen] = useState(false);
+  const [trayPhotos, setTrayPhotos] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [maxAlert, setMaxAlert] = useState(false);
 
@@ -202,20 +203,18 @@ export default function Home() {
     markDownloaded([photo.id]);
   };
 
-  const downloadSelected = async () => {
+  // Open the tray with a snapshot of the current selection instead of auto-firing
+  // many downloads at once (mobile browsers block everything after the first gesture,
+  // and the first file opens inline instead of downloading).
+  const openTray = () => {
     if (selected.size === 0) return;
-    setDownloading(true);
-    const selectedPhotos = photos.filter(p => selected.has(p.id));
-    for (let i = 0; i < selectedPhotos.length; i++) {
-      const photo = selectedPhotos[i];
-      setDownloadProgress(Math.round(((i + 1) / selectedPhotos.length) * 100));
-      triggerDownload(photo, dlSize);
-      await new Promise(r => setTimeout(r, 800));
-    }
-    markDownloaded(selectedPhotos.map(p => p.id));
-    setDownloading(false);
-    setDownloadProgress(0);
-    cancelSelect();
+    setTrayPhotos(photos.filter(p => selected.has(p.id)));
+    setTrayOpen(true);
+  };
+
+  const closeTray = () => {
+    setTrayOpen(false);
+    setTrayPhotos([]);
   };
 
   const changePage = (page) => {
@@ -273,16 +272,12 @@ export default function Home() {
         }
         .container { padding:18px 14px; max-width:1200px; margin:0 auto; }
         .section-title { font-family:'Playfair Display',serif; font-size:13px; color:#c9a84c; letter-spacing:4px; text-transform:uppercase; margin-bottom:16px; }
-
-        /* Breadcrumb (nested navigation) */
         .breadcrumb { display:flex; flex-wrap:wrap; align-items:center; gap:3px; margin-bottom:18px; font-size:12px; line-height:1.6; }
         .crumb { color:#c9a84c; cursor:pointer; white-space:nowrap; }
         .crumb:hover { text-decoration:underline; }
         .crumb.current { color:#f0ece4; cursor:default; }
         .crumb.current:hover { text-decoration:none; }
         .crumb-sep { color:#555; margin:0 3px; }
-
-        /* Premium event hero */
         .hero { text-align:center; padding:26px 16px 24px; }
         .hero-kicker { font-size:11px; letter-spacing:5px; color:#c9a84c; text-transform:uppercase; }
         .hero-title { font-family:'Playfair Display',serif; font-size:30px; font-weight:700; margin:10px 0 4px; line-height:1.2; }
@@ -290,16 +285,12 @@ export default function Home() {
         .hero-divider { width:48px; height:2px; background:#c9a84c; margin:12px auto; border-radius:2px; }
         .hero-sub { font-size:14px; color:#cfc8ba; }
         .hero-help { font-size:12px; color:#7e7768; margin-top:6px; }
-
-        /* How-to guidance card */
         .howto { max-width:440px; margin:0 auto 26px; background:linear-gradient(135deg,rgba(201,168,76,0.06),rgba(255,255,255,0.02)); border:1px solid rgba(201,168,76,0.18); border-radius:14px; padding:15px 18px; }
         .howto-title { font-family:'Playfair Display',serif; font-size:12px; letter-spacing:3px; color:#c9a84c; text-transform:uppercase; text-align:center; margin-bottom:12px; }
         .howto-list { display:flex; flex-direction:column; gap:9px; }
         .howto-item { display:flex; gap:10px; align-items:flex-start; font-size:13px; color:#cfc8ba; line-height:1.5; }
         .howto-num { flex:none; width:20px; height:20px; border-radius:50%; background:rgba(201,168,76,0.15); color:#c9a84c; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px; }
         .howto-note { margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); font-size:11px; color:#8a8372; text-align:center; line-height:1.5; }
-
-        /* Group Selection (multi-group mode only) */
         .welcome-header { text-align:center; padding:24px 0 28px; }
         .welcome-title { font-family:'Playfair Display',serif; font-size:24px; color:#f0ece4; margin-bottom:6px; }
         .welcome-sub { font-size:13px; color:#666; letter-spacing:1px; }
@@ -313,8 +304,6 @@ export default function Home() {
         .group-emoji { font-size:44px; margin-bottom:12px; }
         .group-name { font-family:'Playfair Display',serif; font-size:15px; font-weight:700; color:#f0ece4; line-height:1.4; margin-bottom:6px; }
         .group-sub { font-size:10px; color:#c9a84c; letter-spacing:2px; text-transform:uppercase; }
-
-        /* Folder grid */
         .folder-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:18px; }
         .folder-card {
           background:linear-gradient(135deg,#1a1a1a,#141414);
@@ -325,8 +314,6 @@ export default function Home() {
         .folder-card:hover { border-color:#c9a84c; transform:translateY(-3px); box-shadow:0 8px 32px rgba(201,168,76,0.15); }
         .folder-icon { font-size:48px; margin-bottom:10px; }
         .folder-name { font-size:14px; font-weight:600; color:#f0ece4; line-height:1.4; }
-
-        /* Album cover (POSTER.JPG) — large cinematic poster card */
         .folder-card.cover {
           padding:0; position:relative; aspect-ratio:4/3; overflow:hidden;
           display:flex; flex-direction:column; justify-content:flex-end;
@@ -337,8 +324,6 @@ export default function Home() {
         .folder-card.cover:hover { border-color:#c9a84c; transform:translateY(-4px); box-shadow:0 16px 46px rgba(201,168,76,0.25); }
         .folder-cover-grad { position:absolute; left:0; right:0; bottom:0; height:50%; background:linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 42%, rgba(0,0,0,0) 100%); }
         .folder-card.cover .folder-name { position:relative; z-index:1; width:100%; padding:14px; text-align:left; font-size:15px; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,0.95); }
-
-        /* Toolbar */
         .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
         .folder-header { display:flex; align-items:center; gap:10px; flex:1; min-width:0; }
         .folder-title { font-family:'NTLocalFont','Sarabun',sans-serif; font-size:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -348,8 +333,6 @@ export default function Home() {
           color:#c9a84c; padding:7px 14px; border-radius:20px; cursor:pointer;
           font-family:'NTLocalFont','Sarabun',sans-serif; font-size:12px; font-weight:600; white-space:nowrap;
         }
-
-        /* Photo Grid */
         .photo-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
         .photo-item {
           position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden;
@@ -379,8 +362,6 @@ export default function Home() {
           padding:2px 7px; border-radius:10px;
         }
         .photo-num { position:absolute; bottom:6px; left:8px; font-size:10px; color:rgba(255,255,255,0.55); }
-
-        /* Pagination */
         .pagination { display:flex; align-items:center; justify-content:center; gap:6px; padding:20px 0 110px; flex-wrap:wrap; }
         .page-btn {
           width:38px; height:38px; border-radius:50%; border:1px solid rgba(255,255,255,0.15);
@@ -392,8 +373,6 @@ export default function Home() {
         .page-btn:disabled { opacity:0.3; cursor:not-allowed; }
         .page-btn.arrow { font-size:18px; }
         .page-info { font-size:12px; color:#666; text-align:center; margin-bottom:8px; }
-
-        /* Max Alert */
         .max-alert {
           position:fixed; top:80px; left:50%; transform:translateX(-50%);
           background:#c9a84c; color:#000; padding:10px 20px; border-radius:24px;
@@ -404,8 +383,6 @@ export default function Home() {
           15% { opacity:1; transform:translateX(-50%) translateY(0); }
           75% { opacity:1; } 100% { opacity:0; }
         }
-
-        /* Select Bar */
         .select-bar {
           position:fixed; bottom:0; left:0; right:0; z-index:50;
           background:#151515; border-top:1px solid rgba(255,255,255,0.1);
@@ -424,16 +401,12 @@ export default function Home() {
         }
         .sel-btn.primary { background:#c9a84c; border-color:#c9a84c; color:#000; font-weight:700; }
         .sel-btn:disabled { opacity:0.35; cursor:not-allowed; }
-
-        /* Progress */
         .progress-overlay {
           position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:200;
           display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
         }
         .progress-bar-bg { width:260px; height:6px; background:#333; border-radius:3px; overflow:hidden; }
         .progress-bar-fill { height:100%; background:#c9a84c; border-radius:3px; transition:width 0.3s; }
-
-        /* Lightbox */
         .lightbox {
           position:fixed; inset:0; background:rgba(0,0,0,0.96); z-index:100;
           display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px;
@@ -458,27 +431,34 @@ export default function Home() {
         }
         .lightbox-nav.prev { left:10px; }
         .lightbox-nav.next { right:10px; }
-
-        /* States */
         .loading { text-align:center; padding:60px 20px; color:#666; }
         .spinner { width:34px; height:34px; border:2px solid #333; border-top-color:#c9a84c; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 14px; }
         @keyframes spin { to { transform:rotate(360deg); } }
         .empty { text-align:center; padding:60px 20px; color:#555; font-size:14px; }
         .app-footer { text-align:center; padding:26px 16px 40px; color:#6b6456; font-size:11px; letter-spacing:1px; border-top:1px solid rgba(255,255,255,0.05); margin-top:24px; }
+
+        /* Download Tray (mobile-safe multi-download) */
+        .tray-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.86); z-index:150; display:flex; align-items:flex-end; justify-content:center; }
+        .tray { width:100%; max-width:560px; max-height:84vh; background:#141414; border:1px solid rgba(255,255,255,0.1); border-radius:18px 18px 0 0; display:flex; flex-direction:column; overflow:hidden; }
+        .tray-head { display:flex; align-items:center; justify-content:space-between; padding:16px 18px 8px; }
+        .tray-title { font-family:'NTLocalFont','Sarabun',sans-serif; font-size:16px; font-weight:600; color:#f0ece4; }
+        .tray-close { background:rgba(255,255,255,0.1); border:none; color:#fff; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:14px; flex:none; }
+        .tray-note { padding:0 18px 12px; font-size:12px; color:#8a8372; line-height:1.5; }
+        .tray-size { display:flex; align-items:center; gap:10px; padding:0 18px 12px; }
+        .tray-size-label { font-size:12px; color:#aaa; }
+        .tray-list { overflow-y:auto; padding:4px 12px 8px; display:flex; flex-direction:column; gap:8px; }
+        .tray-item { display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:8px 10px; }
+        .tray-thumb { width:52px; height:52px; border-radius:8px; object-fit:cover; flex:none; background:#222; }
+        .tray-item-info { flex:1; min-width:0; }
+        .tray-item-name { font-size:13px; color:#f0ece4; }
+        .tray-item-done { font-size:11px; color:#2ea05a; margin-top:2px; }
+        .tray-dl-btn { flex:none; background:#c9a84c; border:none; color:#000; font-weight:700; font-family:'NTLocalFont','Sarabun',sans-serif; font-size:12px; padding:9px 14px; border-radius:18px; cursor:pointer; white-space:nowrap; }
+        .tray-dl-btn.done { background:rgba(255,255,255,0.12); color:#cfc8ba; font-weight:600; }
+        .tray-foot { display:flex; gap:10px; padding:12px 18px; border-top:1px solid rgba(255,255,255,0.08); }
+        .tray-foot .sel-btn { flex:1; text-align:center; }
       `}</style>
 
       {maxAlert && <div className="max-alert">⚠️ เลือกได้สูงสุด {MAX_SELECT} รูปต่อครั้ง</div>}
-
-      {downloading && (
-        <div className="progress-overlay">
-          <div style={{fontSize:36}}>⬇️</div>
-          <div style={{fontSize:16,fontWeight:600}}>กำลังดาวน์โหลด {selected.size} รูป...</div>
-          <div className="progress-bar-bg">
-            <div className="progress-bar-fill" style={{width:`${downloadProgress}%`}} />
-          </div>
-          <div style={{fontSize:13,color:'#888'}}>{downloadProgress}%</div>
-        </div>
-      )}
 
       {lightbox !== null && photos[lightbox] && (
         <div className="lightbox" onClick={() => setLightbox(null)}>
@@ -498,6 +478,46 @@ export default function Home() {
         </div>
       )}
 
+      {trayOpen && (
+        <div className="tray-overlay" onClick={closeTray}>
+          <div className="tray" onClick={e => e.stopPropagation()}>
+            <div className="tray-head">
+              <div className="tray-title">⬇ ดาวน์โหลดทีละรูป ({trayPhotos.length})</div>
+              <button className="tray-close" onClick={closeTray}>✕</button>
+            </div>
+            <div className="tray-note">แตะปุ่ม “ดาวน์โหลด” ของแต่ละรูปเพื่อบันทึก — มือถือบางรุ่นต้องกดทีละรูปเพื่อไม่ให้เบราว์เซอร์บล็อก</div>
+            <div className="tray-size">
+              <span className="tray-size-label">ขนาดไฟล์</span>
+              <div className="size-toggle">
+                <button className={`size-opt ${dlSize === 'full' ? 'active' : ''}`} onClick={() => setDlSize('full')}>ขนาดเต็ม</button>
+                <button className={`size-opt ${dlSize === 'social' ? 'active' : ''}`} onClick={() => setDlSize('social')}>โซเชียล</button>
+              </div>
+            </div>
+            <div className="tray-list">
+              {trayPhotos.map((photo, i) => {
+                const isDone = downloaded.has(photo.id);
+                return (
+                  <div key={photo.id} className="tray-item">
+                    <img className="tray-thumb" src={getThumbUrl(photo)} alt={photo.name} loading="lazy" />
+                    <div className="tray-item-info">
+                      <div className="tray-item-name">รูปที่ {i + 1}</div>
+                      {isDone && <div className="tray-item-done">✓ บันทึกแล้ว</div>}
+                    </div>
+                    <button className={`tray-dl-btn ${isDone ? 'done' : ''}`} onClick={() => downloadOne(photo, dlSize)}>
+                      {isDone ? 'โหลดอีกครั้ง' : 'ดาวน์โหลด'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="tray-foot">
+              <button className="sel-btn" onClick={closeTray}>ปิด</button>
+              <button className="sel-btn primary" onClick={() => { closeTray(); cancelSelect(); }}>เสร็จสิ้น</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="header">
         {selectedGroup && path.length > 0 && <button className="back-btn" onClick={back}>← กลับ</button>}
         {!SINGLE_GROUP_MODE && selectedGroup && path.length === 0 && <button className="back-btn" onClick={backToGroups}>← กลับ</button>}
@@ -510,7 +530,6 @@ export default function Home() {
       </div>
 
       <div className="container">
-        {/* Step 1: Group selection (only when multi-group mode) */}
         {!SINGLE_GROUP_MODE && !selectedGroup && (
           <>
             <div className="welcome-header">
@@ -529,7 +548,6 @@ export default function Home() {
           </>
         )}
 
-        {/* Breadcrumb (shown once navigated into folders) */}
         {selectedGroup && path.length > 0 && (
           <div className="breadcrumb">
             <span className="crumb" onClick={() => goToDepth(-1)}>🏠 {SINGLE_GROUP_MODE ? FEATURED_GROUP.name : selectedGroup.name}</span>
@@ -542,7 +560,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Hero + how-to: only on the group landing (root) */}
         {atRoot && SINGLE_GROUP_MODE && (
           <>
             <div className="hero">
@@ -565,12 +582,10 @@ export default function Home() {
           </>
         )}
 
-        {/* Loading a level */}
         {selectedGroup && loading && (
           <div className="loading"><div className="spinner"/><div>กำลังโหลด...</div></div>
         )}
 
-        {/* Folder cards (albums / subfolders) — any depth */}
         {selectedGroup && !loading && mode === 'folders' && (
           <>
             <div className="section-title">{path.length === 0 ? '📁 เลือกงาน / อัลบั้ม' : '📂 เลือกหมวดหมู่'}</div>
@@ -599,7 +614,6 @@ export default function Home() {
           </>
         )}
 
-        {/* Photos (leaf level) */}
         {selectedGroup && !loading && mode === 'photos' && (
           <>
             <div className="toolbar">
@@ -683,7 +697,7 @@ export default function Home() {
           <button className="sel-btn" onClick={selectAllPage}>
             {allPageSelected ? 'ยกเลิกหน้านี้' : 'เลือกหน้านี้'}
           </button>
-          <button className="sel-btn primary" onClick={downloadSelected} disabled={selected.size === 0}>
+          <button className="sel-btn primary" onClick={openTray} disabled={selected.size === 0}>
             ⬇ บันทึก{selected.size > 0 ? ` ${selected.size}` : ''} รูป
           </button>
         </div>
