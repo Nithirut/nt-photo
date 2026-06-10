@@ -236,7 +236,7 @@ export default function Home() {
   const changePage = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0 }); // jump to top of grid/album (smooth is a no-op on this page)
   };
 
   // Image optimization: light thumbs in grid, medium in lightbox, full original only on download
