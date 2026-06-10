@@ -236,7 +236,7 @@ export default function Home() {
   const changePage = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0 }); // jump to top of grid/album (smooth is a no-op on this page)
   };
 
   // Image optimization: light thumbs in grid, medium in lightbox, full original only on download
@@ -389,6 +389,12 @@ export default function Home() {
         .page-btn:disabled { opacity:0.3; cursor:not-allowed; }
         .page-btn.arrow { font-size:18px; }
         .page-info { font-size:12px; color:#666; text-align:center; margin-bottom:8px; }
+        /* Top pagination controls (so users don't have to scroll to the bottom) */
+        .pagination-top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+        .page-nav-btn { background:rgba(201,168,76,0.15); border:1px solid rgba(201,168,76,0.4); color:#c9a84c; padding:8px 16px; border-radius:20px; cursor:pointer; font-family:'NTLocalFont','Sarabun',sans-serif; font-size:13px; font-weight:600; white-space:nowrap; }
+        .page-nav-btn:hover:not(:disabled) { background:rgba(201,168,76,0.28); }
+        .page-nav-btn:disabled { opacity:0.35; cursor:not-allowed; }
+        .page-top-indicator { font-size:13px; color:#cfc8ba; font-weight:600; white-space:nowrap; }
         .max-alert {
           position:fixed; top:80px; left:50%; transform:translateX(-50%);
           background:#c9a84c; color:#000; padding:10px 20px; border-radius:24px;
@@ -651,6 +657,13 @@ export default function Home() {
                 {totalPages > 1 && (
                   <div className="page-info">
                     หน้า {currentPage} / {totalPages} — รูปที่ {pageStart + 1}–{Math.min(pageStart + PHOTOS_PER_PAGE, photos.length)}
+                  </div>
+                )}
+                {totalPages > 1 && (
+                  <div className="pagination-top">
+                    <button className="page-nav-btn" onClick={() => changePage(currentPage - 1)} disabled={currentPage === 1}>‹ ก่อนหน้า</button>
+                    <span className="page-top-indicator">หน้า {currentPage} / {totalPages}</span>
+                    <button className="page-nav-btn" onClick={() => changePage(currentPage + 1)} disabled={currentPage === totalPages}>ถัดไป ›</button>
                   </div>
                 )}
                 <div className={`photo-grid ${selectMode ? 'select-mode' : ''}`}>
