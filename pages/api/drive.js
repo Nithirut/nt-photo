@@ -55,15 +55,26 @@ export default async function handler(req, res) {
     }
 
     if (type === 'photos' && folderId) {
-      const response = await drive.files.list({
-        q: `'${folderId}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/webp') and trashed=false`,
-        fields: 'files(id, name, thumbnailLink, createdTime)',
-        pageSize: 200,
-        orderBy: 'createdTime desc',
-      });
+      // Fetch ALL photos across pages. Drive returns at most `pageSize` files per
+      // request; without following nextPageToken, folders with >pageSize images were
+      // silently capped (the 200-photo limit). Loop until there are no more pages.
+      let allFiles = [];
+      let pageToken;
+      do {
+        const response = await drive.files.list({
+          q: `'${folderId}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/webp') and trashed=false`,
+          fields: 'nextPageToken, files(id, name, thumbnailLink, createdTime)',
+          pageSize: 1000,
+          orderBy: 'createdTime desc',
+          pageToken,
+        });
+        allFiles = allFiles.concat(response.data.files || []);
+        pageToken = response.data.nextPageToken;
+      } while (pageToken);
+
       // Exclude POSTER cover files from the gallery (case-insensitive) so they are
       // never counted or shown for download.
-      const photos = (response.data.files || []).filter(p => {
+      const photos = allFiles.filter(p => {
         const n = (p.name || '').trim().toLowerCase();
         return n !== 'poster.jpg' && n !== 'poster.jpeg' && n !== 'poster.png';
       });
