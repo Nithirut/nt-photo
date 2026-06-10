@@ -48,6 +48,7 @@ export default function Home() {
   const [trayPhotos, setTrayPhotos] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [maxAlert, setMaxAlert] = useState(false);
+  const [isLineBrowser, setIsLineBrowser] = useState(false);
 
   // Download memory + download size
   const [downloaded, setDownloaded] = useState(new Set());
@@ -62,6 +63,11 @@ export default function Home() {
     try {
       const raw = localStorage.getItem(DL_KEY);
       if (raw) setDownloaded(new Set(JSON.parse(raw)));
+    } catch (e) {}
+    // LINE in-app browser blocks downloads/popups/multi-download — detect it and guide
+    // the user to open the page in an external browser. Viewing is never blocked.
+    try {
+      if (/Line\//i.test(navigator.userAgent || '')) setIsLineBrowser(true);
     } catch (e) {}
     if (SINGLE_GROUP_MODE && FEATURED_GROUP) {
       openGroup(FEATURED_GROUP);
@@ -287,6 +293,10 @@ export default function Home() {
           font-size:12px; font-family:'NTLocalFont','Sarabun',sans-serif;
         }
         .container { padding:18px 14px; max-width:1200px; margin:0 auto; }
+        /* LINE in-app browser guidance (download is limited inside LINE) */
+        .line-warning { max-width:1200px; margin:14px auto 0; padding:14px 16px; background:linear-gradient(135deg,rgba(201,168,76,0.16),rgba(201,168,76,0.06)); border:1px solid rgba(201,168,76,0.5); border-radius:14px; }
+        .line-warning-title { font-family:'NTLocalFont','Sarabun',sans-serif; font-size:14px; font-weight:700; color:#c9a84c; margin-bottom:6px; }
+        .line-warning-text { font-family:'NTLocalFont','Sarabun',sans-serif; font-size:13px; color:#cfc8ba; line-height:1.65; }
         .section-title { font-family:'Playfair Display',serif; font-size:13px; color:#c9a84c; letter-spacing:4px; text-transform:uppercase; margin-bottom:16px; }
         .breadcrumb { display:flex; flex-wrap:wrap; align-items:center; gap:3px; margin-bottom:18px; font-size:12px; line-height:1.6; }
         .crumb { color:#c9a84c; cursor:pointer; white-space:nowrap; }
@@ -550,6 +560,14 @@ export default function Home() {
             selectedGroup ? selectedGroup.name : 'ภาพถ่ายกิจกรรม')}
         </div>
       </div>
+
+      {isLineBrowser && (
+        <div className="line-warning">
+          <div className="line-warning-title">⚠️ คุณกำลังเปิดผ่าน LINE</div>
+          <div className="line-warning-text">หากต้องการดาวน์โหลดรูป กรุณาเปิดลิงก์นี้ด้วย Chrome หรือ Safari เพื่อให้บันทึกรูปได้สมบูรณ์</div>
+          <div className="line-warning-text">วิธีเปิด: กดปุ่ม ⋯ มุมขวาบนของ LINE แล้วเลือก “เปิดในเบราว์เซอร์ภายนอก”</div>
+        </div>
+      )}
 
       <div className="container">
         {!SINGLE_GROUP_MODE && !selectedGroup && (
