@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 
-const PHOTOS_PER_PAGE = 12;
+const PHOTOS_PER_PAGE = 24;
 const MAX_SELECT = 10;
 const DL_KEY = 'nt_photo_downloaded'; // "download memory" (this device only)
 
@@ -377,7 +377,7 @@ export default function Home() {
           background:rgba(46,160,90,0.92); color:#fff; font-size:10px; font-weight:600;
           padding:2px 7px; border-radius:10px;
         }
-        .photo-num { position:absolute; bottom:6px; left:8px; font-size:10px; color:rgba(255,255,255,0.55); }
+        .photo-num { position:absolute; bottom:6px; left:6px; font-size:13px; font-weight:700; color:#fff; background:rgba(0,0,0,0.6); padding:2px 8px; border-radius:9px; line-height:1.25; text-shadow:0 1px 2px rgba(0,0,0,0.9); }
         .pagination { display:flex; align-items:center; justify-content:center; gap:6px; padding:20px 0 110px; flex-wrap:wrap; }
         .page-btn {
           width:38px; height:38px; border-radius:50%; border:1px solid rgba(255,255,255,0.15);
