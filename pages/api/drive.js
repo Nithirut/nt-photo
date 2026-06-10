@@ -63,7 +63,7 @@ export default async function handler(req, res) {
       do {
         const response = await drive.files.list({
           q: `'${folderId}' in parents and (mimeType='image/jpeg' or mimeType='image/png' or mimeType='image/webp') and trashed=false`,
-          fields: 'nextPageToken, files(id, name, thumbnailLink, createdTime)',
+          fields: 'nextPageToken, files(id, name, thumbnailLink, createdTime, imageMediaMetadata/time)',
           pageSize: 1000,
           orderBy: 'createdTime desc',
           pageToken,
@@ -78,6 +78,37 @@ export default async function handler(req, res) {
         const n = (p.name || '').trim().toLowerCase();
         return n !== 'poster.jpg' && n !== 'poster.jpeg' && n !== 'poster.png';
       });
+
+      // Sort by real capture time, oldest first (taken earlier -> shown earlier).
+      // Priority: EXIF imageMediaMetadata.time -> createdTime -> name.
+      // Nothing is ever dropped; photos with no usable timestamp are ordered by name,
+      // after those that have one.
+      const captureTs = (p) => {
+        const t = p.imageMediaMetadata && p.imageMediaMetadata.time;
+        if (t) {
+          // EXIF DateTime format: "YYYY:MM:DD HH:MM:SS"
+          const m = String(t).match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+          if (m) return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+        }
+        if (p.createdTime) {
+          const d = Date.parse(p.createdTime);
+          if (!Number.isNaN(d)) return d;
+        }
+        return null;
+      };
+      photos.sort((a, b) => {
+        const ta = captureTs(a);
+        const tb = captureTs(b);
+        if (ta !== null && tb !== null) {
+          if (ta !== tb) return ta - tb;
+        } else if (ta === null && tb !== null) {
+          return 1;
+        } else if (ta !== null && tb === null) {
+          return -1;
+        }
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
       return res.status(200).json({ photos });
     }
 
