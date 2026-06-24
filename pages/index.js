@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { NUMTHONG_GROUP } from '../lib/ntPhotoConfig';
 
 const PHOTOS_PER_PAGE = 24;
 const MAX_SELECT = 10;
@@ -10,10 +11,11 @@ const DL_KEY = 'nt_photo_downloaded'; // "download memory" (this device only)
 const SINGLE_GROUP_MODE = true;
 
 const GROUPS = [
-  { id: 'lica', name: 'LICA', emoji: '🏆', folderId: '1XWC1YGcl_oCzxX0GSMcX2BiiT2xaGTO3' },
-  { id: 'numthong', name: 'NUMTHONG', emoji: '⭐', folderId: '12Tq9bNbpeKTazJetxmMb9xVCBvYZRWbb' },
-  { id: 'ideaplan', name: 'Ideaplan Insurance', emoji: '💡', folderId: '1A6SLm1tg1sbij4ZYRunT0anBqER17bcS' },
-  { id: 'pednoi', name: 'เป็ดน้อยอินชัวรันส์', emoji: '🦆', folderId: '1rbI6ePA4BtQkbR3QtiHd4bl7tofji4V5' },
+  // NT Photo is NUMTHONG-only. The NUMTHONG group (incl. its root folder ID) is
+  // sourced from the central config (lib/ntPhotoConfig) so the ID lives in ONE
+  // place. Legacy groups (lica/ideaplan/pednoi) remain removed to keep NT within
+  // its own NUMTHONG security boundary.
+  NUMTHONG_GROUP,
 ];
 
 const FEATURED_GROUP = GROUPS.find(g => g.id === 'numthong');
