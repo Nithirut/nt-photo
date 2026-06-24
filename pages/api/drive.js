@@ -28,6 +28,17 @@ function setNoStoreHeaders(res) {
   res.setHeader('Cache-Control', 'no-store');
 }
 
+// ---- Hidden system folders --------------------------------------------------
+// Folders whose name begins with "_" (e.g. _FEATURED, _ASSETS, _PRIVATE) are
+// reserved for future internal use and must never appear in the gallery. Matched
+// by PREFIX on the raw name (no trim, no "contains"), so EVENT_FEATURED, FEATURED_
+// and FEATURED stay visible while _FEATURED / _test are hidden. Non-string names
+// are treated as NOT system (defensive) so a malformed entry is never silently
+// dropped here.
+function isSystemFolder(name) {
+  return typeof name === 'string' && name.startsWith('_');
+}
+
 async function getDriveClient() {
   const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
   const auth = new google.auth.GoogleAuth({
@@ -104,7 +115,11 @@ export default async function handler(req, res) {
         orderBy: 'createdTime desc',
         pageSize: 50,
       });
-      const folders = response.data.files || [];
+      // Exclude hidden system folders (_FEATURED, _ASSETS, ...) BEFORE the poster
+      // lookup, the folder/photos mode decision, and caching — so the client and
+      // the cached JSON only ever see VISIBLE folders. Returns a new array (no
+      // mutation of the API result).
+      const folders = (response.data.files || []).filter((f) => !isSystemFolder(f.name));
 
       if (folders.length > 0) {
         try {
