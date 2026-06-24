@@ -288,6 +288,8 @@ export default function Home() {
         .logo { font-family:'Playfair Display',serif; font-size:24px; font-weight:700; letter-spacing:3px; }
         .logo span { color:#c9a84c; }
         .tagline { font-size:10px; color:#888; letter-spacing:4px; text-transform:uppercase; margin-top:3px; }
+        /* When the tagline shows a Thai folder/event name, drop the wide Latin tracking + uppercase */
+        .tagline-folder { font-size:12px; color:#cfc8ba; letter-spacing:0.2px; text-transform:none; line-height:1.5; max-width:80vw; margin:3px auto 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .back-btn {
           position:absolute; left:16px; top:50%; transform:translateY(-50%);
           background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12);
@@ -300,19 +302,34 @@ export default function Home() {
         .line-warning-title { font-family:'NTLocalFont','Sarabun',sans-serif; font-size:14px; font-weight:700; color:#c9a84c; margin-bottom:6px; }
         .line-warning-text { font-family:'NTLocalFont','Sarabun',sans-serif; font-size:13px; color:#cfc8ba; line-height:1.65; }
         .section-title { font-family:'Playfair Display',serif; font-size:13px; color:#c9a84c; letter-spacing:4px; text-transform:uppercase; margin-bottom:16px; }
-        .breadcrumb { display:flex; flex-wrap:wrap; align-items:center; gap:3px; margin-bottom:18px; font-size:12px; line-height:1.6; }
-        .crumb { color:#c9a84c; cursor:pointer; white-space:nowrap; }
+        /* Breadcrumb: accessible nav + own horizontal scroll on mobile (never the whole page) */
+        .breadcrumb { margin-bottom:18px; }
+        .breadcrumb-list {
+          list-style:none; display:flex; flex-wrap:nowrap; align-items:center; gap:2px;
+          font-size:12px; line-height:1.6; overflow-x:auto; overflow-y:hidden;
+          -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px;
+        }
+        .breadcrumb-list::-webkit-scrollbar { display:none; }
+        .breadcrumb-item { display:inline-flex; align-items:center; flex:none; }
+        .crumb {
+          display:inline-flex; align-items:center; gap:4px; max-width:200px;
+          color:#c9a84c; background:none; border:none; cursor:pointer; white-space:nowrap;
+          font-family:'NTLocalFont','Sarabun',sans-serif; font-size:12px; line-height:1.5;
+          letter-spacing:0.2px; padding:9px 6px; min-height:40px; border-radius:8px;
+        }
+        .crumb-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px; }
         .crumb:hover { text-decoration:underline; }
-        .crumb.current { color:#f0ece4; cursor:default; }
+        .crumb:focus-visible { outline:2px solid #c9a84c; outline-offset:2px; text-decoration:none; }
+        .crumb.current { color:#f0ece4; cursor:default; font-weight:700; }
         .crumb.current:hover { text-decoration:none; }
-        .crumb-sep { color:#555; margin:0 3px; }
+        .crumb-sep { color:#7a7468; margin:0 1px; flex:none; }
         .hero { text-align:center; padding:26px 16px 24px; }
         .hero-kicker { font-size:11px; letter-spacing:5px; color:#c9a84c; text-transform:uppercase; }
         .hero-title { font-family:'Playfair Display',serif; font-size:30px; font-weight:700; margin:10px 0 4px; line-height:1.2; }
         .hero-title span { color:#c9a84c; }
         .hero-divider { width:48px; height:2px; background:#c9a84c; margin:12px auto; border-radius:2px; }
         .hero-sub { font-size:14px; color:#cfc8ba; }
-        .hero-help { font-size:12px; color:#7e7768; margin-top:6px; }
+        .hero-help { font-size:12px; color:#9a917f; margin-top:6px; }
         .howto { max-width:440px; margin:0 auto 26px; background:linear-gradient(135deg,rgba(201,168,76,0.06),rgba(255,255,255,0.02)); border:1px solid rgba(201,168,76,0.18); border-radius:14px; padding:15px 18px; }
         .howto-title { font-family:'Playfair Display',serif; font-size:12px; letter-spacing:3px; color:#c9a84c; text-transform:uppercase; text-align:center; margin-bottom:12px; }
         .howto-list { display:flex; flex-direction:column; gap:9px; }
@@ -400,7 +417,7 @@ export default function Home() {
         .page-btn.active { background:#c9a84c; border-color:#c9a84c; color:#000; font-weight:700; }
         .page-btn:disabled { opacity:0.3; cursor:not-allowed; }
         .page-btn.arrow { font-size:18px; }
-        .page-info { font-size:12px; color:#666; text-align:center; margin-bottom:8px; }
+        .page-info { font-size:12px; color:#968d7b; text-align:center; margin-bottom:8px; }
         /* Top pagination controls (so users don't have to scroll to the bottom) */
         .pagination-top { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
         .page-nav-btn { background:rgba(201,168,76,0.15); border:1px solid rgba(201,168,76,0.4); color:#c9a84c; padding:8px 16px; border-radius:20px; cursor:pointer; font-family:'NTLocalFont','Sarabun',sans-serif; font-size:13px; font-weight:600; white-space:nowrap; }
@@ -468,8 +485,8 @@ export default function Home() {
         .loading { text-align:center; padding:60px 20px; color:#666; }
         .spinner { width:34px; height:34px; border:2px solid #333; border-top-color:#c9a84c; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 14px; }
         @keyframes spin { to { transform:rotate(360deg); } }
-        .empty { text-align:center; padding:60px 20px; color:#555; font-size:14px; }
-        .app-footer { text-align:center; padding:26px 16px 40px; color:#6b6456; font-size:11px; letter-spacing:1px; border-top:1px solid rgba(255,255,255,0.05); margin-top:24px; }
+        .empty { text-align:center; padding:60px 20px; color:#968d7b; font-size:14px; }
+        .app-footer { text-align:center; padding:26px 16px 40px; color:#8a8273; font-size:11px; letter-spacing:1px; border-top:1px solid rgba(255,255,255,0.05); margin-top:24px; }
 
         /* Download Tray (mobile-safe multi-download) */
         .tray-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.86); z-index:150; display:flex; align-items:flex-end; justify-content:center; }
@@ -490,20 +507,38 @@ export default function Home() {
         .tray-dl-btn.done { background:rgba(255,255,255,0.12); color:#cfc8ba; font-weight:600; }
         .tray-foot { display:flex; gap:10px; padding:12px 18px; border-top:1px solid rgba(255,255,255,0.08); }
         .tray-foot .sel-btn { flex:1; text-align:center; }
+
+        /* ---- Accessibility polish ---- */
+        /* Visible keyboard focus for all interactive controls (does not affect mouse users) */
+        button:focus-visible, a:focus-visible { outline:2px solid #c9a84c; outline-offset:2px; }
+        /* iPhone safe-area: keep the fixed bars clear of the home indicator */
+        @supports (padding:max(0px)) {
+          .select-bar { padding-bottom:calc(10px + env(safe-area-inset-bottom)); }
+          .tray-foot { padding-bottom:calc(12px + env(safe-area-inset-bottom)); }
+        }
+        /* Respect reduced-motion: drop animations, transitions, and hover zoom/lift */
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration:0.001ms !important; animation-iteration-count:1 !important;
+            transition-duration:0.001ms !important; scroll-behavior:auto !important;
+          }
+          .photo-item:hover img { transform:none; }
+          .folder-card:hover, .group-card:hover, .folder-card.cover:hover { transform:none; }
+        }
       `}</style>
 
       {maxAlert && <div className="max-alert">⚠️ เลือกได้สูงสุด {MAX_SELECT} รูปต่อครั้ง</div>}
 
       {lightbox !== null && photos[lightbox] && (
         <div className="lightbox" onClick={() => setLightbox(null)}>
-          <button className="lightbox-close" onClick={() => setLightbox(null)}>✕</button>
+          <button className="lightbox-close" aria-label="ปิด" onClick={() => setLightbox(null)}>✕</button>
           {lightbox > 0 && (
-            <button className="lightbox-nav prev" onClick={e => { e.stopPropagation(); setLightbox(lightbox - 1); }}>‹</button>
+            <button className="lightbox-nav prev" aria-label="รูปก่อนหน้า" onClick={e => { e.stopPropagation(); setLightbox(lightbox - 1); }}>‹</button>
           )}
           {lightbox < photos.length - 1 && (
-            <button className="lightbox-nav next" onClick={e => { e.stopPropagation(); setLightbox(lightbox + 1); }}>›</button>
+            <button className="lightbox-nav next" aria-label="รูปถัดไป" onClick={e => { e.stopPropagation(); setLightbox(lightbox + 1); }}>›</button>
           )}
-          <img className="lightbox-img" src={getViewUrl(photos[lightbox])} alt="" onClick={e => e.stopPropagation()} />
+          <img className="lightbox-img" src={getViewUrl(photos[lightbox])} alt={photos[lightbox]?.name || ''} onClick={e => e.stopPropagation()} />
           <div className="lightbox-counter">{lightbox + 1} / {photos.length}</div>
           <div className="lightbox-actions" onClick={e => e.stopPropagation()}>
             <button className="lb-btn primary" onClick={() => downloadOne(photos[lightbox], 'full')}>⬇ ขนาดเต็ม</button>
@@ -517,7 +552,7 @@ export default function Home() {
           <div className="tray" onClick={e => e.stopPropagation()}>
             <div className="tray-head">
               <div className="tray-title">⬇ ดาวน์โหลดทีละรูป ({trayPhotos.length})</div>
-              <button className="tray-close" onClick={closeTray}>✕</button>
+              <button className="tray-close" aria-label="ปิด" onClick={closeTray}>✕</button>
             </div>
             <div className="tray-note">แตะปุ่ม “ดาวน์โหลด” ของแต่ละรูปเพื่อบันทึก — มือถือบางรุ่นต้องกดทีละรูปเพื่อไม่ให้เบราว์เซอร์บล็อก</div>
             <div className="tray-size">
@@ -556,7 +591,7 @@ export default function Home() {
         {selectedGroup && path.length > 0 && <button className="back-btn" onClick={back}>← กลับ</button>}
         {!SINGLE_GROUP_MODE && selectedGroup && path.length === 0 && <button className="back-btn" onClick={backToGroups}>← กลับ</button>}
         <div className="logo">NT <span>Photo</span></div>
-        <div className="tagline">
+        <div className={`tagline ${currentFolderName ? 'tagline-folder' : ''}`}>
           {currentFolderName ? currentFolderName :
            (SINGLE_GROUP_MODE ? 'NUMTHONG Event Gallery' :
             selectedGroup ? selectedGroup.name : 'ภาพถ่ายกิจกรรม')}
@@ -591,15 +626,33 @@ export default function Home() {
         )}
 
         {selectedGroup && path.length > 0 && (
-          <div className="breadcrumb">
-            <span className="crumb" onClick={() => goToDepth(-1)}>🏠 {SINGLE_GROUP_MODE ? FEATURED_GROUP.name : selectedGroup.name}</span>
-            {path.map((node, i) => (
-              <span key={node.id}>
-                <span className="crumb-sep">›</span>
-                <span className={`crumb ${i === path.length - 1 ? 'current' : ''}`} onClick={() => goToDepth(i)}>{node.name}</span>
-              </span>
-            ))}
-          </div>
+          <nav className="breadcrumb" aria-label="Breadcrumb">
+            <ol className="breadcrumb-list">
+              <li className="breadcrumb-item">
+                <button type="button" className="crumb" onClick={() => goToDepth(-1)}>
+                  <span aria-hidden="true">🏠</span>
+                  <span className="crumb-label">{SINGLE_GROUP_MODE ? FEATURED_GROUP.name : selectedGroup.name}</span>
+                </button>
+              </li>
+              {path.map((node, i) => {
+                const isCurrent = i === path.length - 1;
+                return (
+                  <li className="breadcrumb-item" key={node.id}>
+                    <span className="crumb-sep" aria-hidden="true">›</span>
+                    {isCurrent ? (
+                      <span className="crumb current" aria-current="page" title={node.name}>
+                        <span className="crumb-label">{node.name}</span>
+                      </span>
+                    ) : (
+                      <button type="button" className="crumb" onClick={() => goToDepth(i)} title={node.name}>
+                        <span className="crumb-label">{node.name}</span>
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
         )}
 
         {atRoot && SINGLE_GROUP_MODE && (
@@ -625,14 +678,14 @@ export default function Home() {
         )}
 
         {selectedGroup && loading && (
-          <div className="loading"><div className="spinner"/><div>กำลังโหลด...</div></div>
+          <div className="loading" role="status" aria-live="polite"><div className="spinner" aria-hidden="true"/><div>กำลังโหลด...</div></div>
         )}
 
         {selectedGroup && !loading && mode === 'folders' && (
           <>
             <div className="section-title">{path.length === 0 ? '📁 เลือกงาน / อัลบั้ม' : '📂 เลือกหมวดหมู่'}</div>
             {folders.length === 0 ? (
-              <div className="empty">⚠️ ยังไม่มีโฟลเดอร์</div>
+              <div className="empty" role="status">⚠️ ยังไม่มีโฟลเดอร์</div>
             ) : (
               <div className="folder-grid">
                 {folders.map(folder => (
@@ -671,7 +724,7 @@ export default function Home() {
             </div>
 
             {photos.length === 0 ? (
-              <div className="empty">📭 ยังไม่มีภาพในอัลบั้มนี้</div>
+              <div className="empty" role="status">📭 ยังไม่มีภาพในอัลบั้มนี้</div>
             ) : (
               <>
                 {totalPages > 1 && (
@@ -714,15 +767,15 @@ export default function Home() {
                   })}
                 </div>
                 {totalPages > 1 && (
-                  <div className="pagination">
-                    <button className="page-btn arrow" onClick={() => changePage(1)} disabled={currentPage === 1}>«</button>
-                    <button className="page-btn arrow" onClick={() => changePage(currentPage - 1)} disabled={currentPage === 1}>‹</button>
+                  <nav className="pagination" aria-label="แบ่งหน้า">
+                    <button className="page-btn arrow" aria-label="หน้าแรก" onClick={() => changePage(1)} disabled={currentPage === 1}>«</button>
+                    <button className="page-btn arrow" aria-label="หน้าก่อนหน้า" onClick={() => changePage(currentPage - 1)} disabled={currentPage === 1}>‹</button>
                     {getPageNumbers().map(n => (
-                      <button key={n} className={`page-btn ${n === currentPage ? 'active' : ''}`} onClick={() => changePage(n)}>{n}</button>
+                      <button key={n} className={`page-btn ${n === currentPage ? 'active' : ''}`} aria-label={`หน้า ${n}`} aria-current={n === currentPage ? 'page' : undefined} onClick={() => changePage(n)}>{n}</button>
                     ))}
-                    <button className="page-btn arrow" onClick={() => changePage(currentPage + 1)} disabled={currentPage === totalPages}>›</button>
-                    <button className="page-btn arrow" onClick={() => changePage(totalPages)} disabled={currentPage === totalPages}>»</button>
-                  </div>
+                    <button className="page-btn arrow" aria-label="หน้าถัดไป" onClick={() => changePage(currentPage + 1)} disabled={currentPage === totalPages}>›</button>
+                    <button className="page-btn arrow" aria-label="หน้าสุดท้าย" onClick={() => changePage(totalPages)} disabled={currentPage === totalPages}>»</button>
+                  </nav>
                 )}
                 {totalPages <= 1 && <div style={{paddingBottom: selectMode ? 110 : 20}} />}
               </>
