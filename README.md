@@ -1,8 +1,3 @@
 # nt-photo
-NT Photo System
 
-<!-- preview rebuild trigger: apply NT_ALLOWED_ROOT_IDS (no-op) -->
-
-<!-- rebuild 2: apply Preview env (branch-scoped) -->
-
-<!-- trigger preview after env reset -->
+NT Photo System — a NUMTHONG-only event photo gallery built on Next.js, served from Google Drive through a read-only service account.
