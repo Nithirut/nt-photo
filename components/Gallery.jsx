@@ -19,7 +19,7 @@ const errorKindFromStatus = (status) => {
   return 'generic';
 };
 
-const PHOTOS_PER_PAGE = 24;
+const PHOTOS_PER_PAGE = 28;
 const MAX_SELECT = 10;
 const DL_KEY = 'nt_photo_downloaded'; // "download memory" (this device only)
 
