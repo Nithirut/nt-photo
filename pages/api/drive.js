@@ -14,6 +14,20 @@ function getAllowedRoots() {
   return new Set((NT_ALLOWED_ROOT_IDS || []).filter((s) => isValidDriveId(s)));
 }
 
+// ---- HTTP caching (Vercel CDN only) ----------------------------------------
+// Only SUCCESSFUL metadata (folder/photo lists) is cacheable: it carries no
+// per-user or secret data, and the NUMTHONG-only boundary is enforced BEFORE any
+// 200 is returned. Every error path stays no-store (set as the default below),
+// so 4xx/5xx/forbidden responses are never cached. No DB, no metadata file.
+function setSuccessCacheHeaders(res) {
+  // CDN caches metadata 5 min; may serve stale up to 1 day while it revalidates
+  // in the background. New photos appear within ~5 min; no rebuild/purge needed.
+  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
+}
+function setNoStoreHeaders(res) {
+  res.setHeader('Cache-Control', 'no-store');
+}
+
 async function getDriveClient() {
   const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
   const auth = new google.auth.GoogleAuth({
@@ -54,6 +68,10 @@ async function isUnderAllowedRoot(drive, id, allowedRoots, memo) {
 }
 
 export default async function handler(req, res) {
+  // Default: never cache. Only the two successful metadata returns below opt in
+  // to CDN caching (overriding this), so every error path remains no-store.
+  setNoStoreHeaders(res);
+
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
@@ -112,6 +130,7 @@ export default async function handler(req, res) {
         }
       }
 
+      setSuccessCacheHeaders(res);
       return res.status(200).json({ folders });
     }
 
@@ -164,6 +183,7 @@ export default async function handler(req, res) {
         return (a.name || '').localeCompare(b.name || '');
       });
 
+      setSuccessCacheHeaders(res);
       return res.status(200).json({ photos });
     }
 
