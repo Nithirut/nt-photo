@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import { NT_ALLOWED_ROOT_IDS, NUMTHONG_ROOT_ID } from '../../lib/ntPhotoConfig';
 
 // ---- NT Photo security boundary (NUMTHONG-only) -------------------------
 // Drive IDs are URL-safe base64-ish tokens. Reject anything else (also blocks
@@ -6,11 +7,11 @@ import { google } from 'googleapis';
 const ID_RE = /^[A-Za-z0-9_-]{10,200}$/;
 const isValidDriveId = (id) => typeof id === 'string' && ID_RE.test(id);
 
-// Allowed roots come ONLY from NT_ALLOWED_ROOT_IDS (comma-separated, trimmed,
-// validated). No fallback to DRIVE_FOLDER_ID / shared parent. Empty => fail closed.
+// Allowed roots come from the central static config (NUMTHONG only). No env
+// dependency, no fallback to DRIVE_FOLDER_ID / shared parent. Each entry is
+// re-validated here; an empty allowlist would still fail closed.
 function getAllowedRoots() {
-  const raw = process.env.NT_ALLOWED_ROOT_IDS || '';
-  return new Set(raw.split(',').map((s) => s.trim()).filter((s) => isValidDriveId(s)));
+  return new Set((NT_ALLOWED_ROOT_IDS || []).filter((s) => isValidDriveId(s)));
 }
 
 async function getDriveClient() {
@@ -60,6 +61,8 @@ export default async function handler(req, res) {
 
   const { type, folderId, groupFolderId } = req.query;
   const allowedRoots = getAllowedRoots();
+  // Defense-in-depth: with static config this is non-empty. If the allowlist
+  // were ever emptied, still refuse rather than serve unbounded Drive access.
   if (allowedRoots.size === 0) {
     return res.status(503).json({ error: 'Service not configured' }); // fail closed
   }
@@ -69,9 +72,9 @@ export default async function handler(req, res) {
     const memo = new Map();
 
     if (type === 'folders') {
-      // Backward-compat: DRIVE_FOLDER_ID may seed the default, but it is honored
-      // ONLY if it passes the allowed-root check (never an implicit shared parent).
-      const target = (groupFolderId || process.env.DRIVE_FOLDER_ID || '').trim();
+      // Default to the NUMTHONG root from central config when no group folder is
+      // supplied. DRIVE_FOLDER_ID is never consulted as a boundary or default.
+      const target = (groupFolderId || NUMTHONG_ROOT_ID).trim();
       if (!isValidDriveId(target)) return res.status(400).json({ error: 'Invalid folder id' });
       if (!(await isUnderAllowedRoot(drive, target, allowedRoots, memo))) {
         return res.status(403).json({ error: 'Forbidden' });

@@ -1,12 +1,13 @@
 import { google } from 'googleapis';
+import { NT_ALLOWED_ROOT_IDS } from '../../lib/ntPhotoConfig';
 
 const ID_RE = /^[A-Za-z0-9_-]{10,200}$/;
 const isValidDriveId = (id) => typeof id === 'string' && ID_RE.test(id);
 const IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
+// Allowed roots from central static config (NUMTHONG only). No env dependency.
 function getAllowedRoots() {
-  const raw = process.env.NT_ALLOWED_ROOT_IDS || '';
-  return new Set(raw.split(',').map((s) => s.trim()).filter((s) => isValidDriveId(s)));
+  return new Set((NT_ALLOWED_ROOT_IDS || []).filter((s) => isValidDriveId(s)));
 }
 
 async function getDriveClient() {
@@ -66,6 +67,7 @@ export default async function handler(req, res) {
   const { size } = req.query;
   if (!isValidDriveId(id)) return res.status(400).json({ error: 'Invalid file id' });
   const allowedRoots = getAllowedRoots();
+  // Defense-in-depth: non-empty under static config; still fail closed if emptied.
   if (allowedRoots.size === 0) return res.status(503).json({ error: 'Service not configured' });
   try {
     const drive = await getDriveClient();
