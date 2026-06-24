@@ -10,10 +10,9 @@ const DL_KEY = 'nt_photo_downloaded'; // "download memory" (this device only)
 const SINGLE_GROUP_MODE = true;
 
 const GROUPS = [
-  { id: 'lica', name: 'LICA', emoji: '🏆', folderId: '1XWC1YGcl_oCzxX0GSMcX2BiiT2xaGTO3' },
+  // NT Photo is NUMTHONG-only. Legacy groups (lica/ideaplan/pednoi) removed to close
+  // the cross-project reference and keep NT within its own NUMTHONG security boundary.
   { id: 'numthong', name: 'NUMTHONG', emoji: '⭐', folderId: '12Tq9bNbpeKTazJetxmMb9xVCBvYZRWbb' },
-  { id: 'ideaplan', name: 'Ideaplan Insurance', emoji: '💡', folderId: '1A6SLm1tg1sbij4ZYRunT0anBqER17bcS' },
-  { id: 'pednoi', name: 'เป็ดน้อยอินชัวรันส์', emoji: '🦆', folderId: '1rbI6ePA4BtQkbR3QtiHd4bl7tofji4V5' },
 ];
 
 const FEATURED_GROUP = GROUPS.find(g => g.id === 'numthong');
