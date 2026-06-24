@@ -347,24 +347,31 @@ export default function Gallery() {
         /* Breadcrumb: accessible nav + own horizontal scroll on mobile (never the whole page) */
         .breadcrumb { margin-bottom:18px; }
         .breadcrumb-list {
-          list-style:none; display:flex; flex-wrap:nowrap; align-items:center; gap:2px;
+          list-style:none; display:flex; flex-wrap:nowrap; align-items:center; gap:6px;
           font-size:12px; line-height:1.6; overflow-x:auto; overflow-y:hidden;
-          -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px;
+          -webkit-overflow-scrolling:touch; scrollbar-width:none; padding:2px 2px 4px;
         }
         .breadcrumb-list::-webkit-scrollbar { display:none; }
-        .breadcrumb-item { display:inline-flex; align-items:center; flex:none; }
+        .breadcrumb-item { display:inline-flex; align-items:center; flex:none; gap:6px; }
+        /* Capsule crumbs: each level is its own pill with a thin gold border. Layout
+           style only — navigation logic, semantics, and aria are unchanged. */
         .crumb {
-          display:inline-flex; align-items:center; gap:4px; max-width:200px;
-          color:#c9a84c; background:none; border:none; cursor:pointer; white-space:nowrap;
+          display:inline-flex; align-items:center; gap:5px; max-width:220px;
+          color:#e7dfce; background:rgba(255,255,255,0.04);
+          border:1px solid rgba(201,168,76,0.45); cursor:pointer; white-space:nowrap;
           font-family:'NTLocalFont','Sarabun',sans-serif; font-size:12px; line-height:1.5;
-          letter-spacing:0.2px; padding:9px 6px; min-height:40px; border-radius:8px;
+          letter-spacing:0.2px; padding:10px 14px; min-height:44px; border-radius:16px;
+          transition:border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
         }
-        .crumb-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px; }
-        .crumb:hover { text-decoration:underline; }
+        .crumb-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:150px; }
+        .crumb:hover { border-color:#c9a84c; background:rgba(201,168,76,0.12); color:#fff; text-decoration:none; }
         .crumb:focus-visible { outline:2px solid #c9a84c; outline-offset:2px; text-decoration:none; }
-        .crumb.current { color:#f0ece4; cursor:default; font-weight:700; }
-        .crumb.current:hover { text-decoration:none; }
-        .crumb-sep { color:#7a7468; margin:0 1px; flex:none; }
+        /* Current level: gold-tinted fill + stronger border + bolder text (distinct by
+           more than colour alone), and not interactive. */
+        .crumb.current { color:#fdf6e3; cursor:default; font-weight:700; background:rgba(201,168,76,0.22); border-color:#c9a84c; }
+        .crumb.current:hover { background:rgba(201,168,76,0.22); border-color:#c9a84c; text-decoration:none; }
+        .crumb-sep { color:#caa84c; opacity:0.7; margin:0; flex:none; font-size:13px; }
+        @media (max-width:480px){ .crumb-label { max-width:118px; } }
         .hero { text-align:center; padding:26px 16px 24px; }
         .hero-kicker { font-size:11px; letter-spacing:5px; color:#c9a84c; text-transform:uppercase; }
         .hero-title { font-family:'Playfair Display',serif; font-size:30px; font-weight:700; margin:10px 0 4px; line-height:1.2; }
