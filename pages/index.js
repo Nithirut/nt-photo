@@ -1,6 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { NUMTHONG_GROUP } from '../lib/ntPhotoConfig';
+
+// User-facing load-error messages (Thai). No internal/security details are exposed.
+const LOAD_ERROR_TEXT = {
+  network: 'ไม่สามารถเชื่อมต่อได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
+  forbidden: 'ไม่สามารถเข้าถึงอัลบั้มนี้ได้',
+  notfound: 'ไม่พบอัลบั้มหรือโฟลเดอร์นี้',
+  ratelimit: 'ขณะนี้มีผู้ใช้งานจำนวนมาก กรุณารอสักครู่แล้วลองใหม่',
+  server: 'ระบบไม่สามารถโหลดข้อมูลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง',
+  generic: 'ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+};
+const errorKindFromStatus = (status) => {
+  if (status === 403) return 'forbidden';
+  if (status === 404) return 'notfound';
+  if (status === 429) return 'ratelimit';
+  if (status >= 500) return 'server';
+  return 'generic';
+};
 
 const PHOTOS_PER_PAGE = 24;
 const MAX_SELECT = 10;
@@ -51,6 +68,12 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const [maxAlert, setMaxAlert] = useState(false);
   const [isLineBrowser, setIsLineBrowser] = useState(false);
+  // Load error (null on success). Shape: { kind } — distinct from a real empty album.
+  const [loadError, setLoadError] = useState(null);
+  // Monotonic request id: only the latest loadLevel call may write state (stale-response guard).
+  const reqIdRef = useRef(0);
+  // Last requested location so "ลองใหม่" retries the same level (path/breadcrumb preserved).
+  const lastLoadRef = useRef(null);
 
   // Download memory + download size
   const [downloaded, setDownloaded] = useState(new Set());
@@ -88,7 +111,10 @@ export default function Home() {
   // Generic nested navigation: load a folder level — show its subfolders if any, else its photos.
   // Works for unlimited depth (group → album → subfolder → subfolder → ... → photos).
   const loadLevel = async (folderId, isRoot = false) => {
+    const myReq = ++reqIdRef.current;     // claim latest request
+    lastLoadRef.current = { folderId, isRoot };
     setLoading(true);
+    setLoadError(null);
     setMode(null);
     setFolders([]);
     setPhotos([]);
@@ -96,9 +122,13 @@ export default function Home() {
     setSelected(new Set());
     setCurrentPage(1);
     setMaxAlert(false);
+    const isStale = () => myReq !== reqIdRef.current; // a newer load started
     try {
       const fRes = await fetch(`/api/drive?type=folders&groupFolderId=${folderId}`);
+      if (isStale()) return;
+      if (!fRes.ok) { setLoadError({ kind: errorKindFromStatus(fRes.status) }); return; }
       const fData = await fRes.json();
+      if (isStale()) return;
       const subs = fData.folders || [];
       if (subs.length > 0) {
         // Apply custom album order only at the main album level (group root).
@@ -106,15 +136,27 @@ export default function Home() {
         setMode('folders');
       } else {
         const pRes = await fetch(`/api/drive?type=photos&folderId=${folderId}`);
+        if (isStale()) return;
+        if (!pRes.ok) { setLoadError({ kind: errorKindFromStatus(pRes.status) }); return; }
         const pData = await pRes.json();
+        if (isStale()) return;
         setPhotos(pData.photos || []);
         setMode('photos');
       }
     } catch (e) {
-      setPhotos([]);
-      setMode('photos');
+      // Network / fetch failure (or JSON parse) — surface as an error, never a fake empty album.
+      if (!isStale()) setLoadError({ kind: 'network' });
+    } finally {
+      if (!isStale()) setLoading(false);
     }
-    setLoading(false);
+  };
+
+  // "ลองใหม่": reload the SAME level. loadLevel never mutates `path`, so the
+  // breadcrumb/navigation stack is preserved. Guarded against rapid re-clicks.
+  const retryLoad = () => {
+    if (loading) return;
+    const last = lastLoadRef.current;
+    if (last) loadLevel(last.folderId, last.isRoot);
   };
 
   const openGroup = (group) => {
@@ -486,6 +528,14 @@ export default function Home() {
         .spinner { width:34px; height:34px; border:2px solid #333; border-top-color:#c9a84c; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 14px; }
         @keyframes spin { to { transform:rotate(360deg); } }
         .empty { text-align:center; padding:60px 20px; color:#968d7b; font-size:14px; }
+        /* Load-error state (distinct from empty) — in-content card, NT dark/gold */
+        .load-error { max-width:440px; margin:34px auto; padding:26px 22px; text-align:center; background:linear-gradient(135deg,rgba(201,168,76,0.07),rgba(255,255,255,0.02)); border:1px solid rgba(201,168,76,0.24); border-radius:16px; }
+        .load-error-icon { font-size:34px; margin-bottom:10px; }
+        .load-error-title { font-family:'NTLocalFont','Sarabun',sans-serif; font-size:16px; font-weight:700; color:#f0ece4; margin-bottom:8px; }
+        .load-error-msg { font-family:'NTLocalFont','Sarabun',sans-serif; font-size:13px; color:#cfc8ba; line-height:1.7; margin-bottom:18px; }
+        .retry-btn { background:#c9a84c; border:none; color:#000; font-weight:700; font-family:'NTLocalFont','Sarabun',sans-serif; font-size:14px; padding:11px 26px; border-radius:22px; cursor:pointer; min-height:44px; }
+        .retry-btn:hover:not(:disabled) { background:#d8b95e; }
+        .retry-btn:disabled { opacity:0.5; cursor:not-allowed; }
         .app-footer { text-align:center; padding:26px 16px 40px; color:#8a8273; font-size:11px; letter-spacing:1px; border-top:1px solid rgba(255,255,255,0.05); margin-top:24px; }
 
         /* Download Tray (mobile-safe multi-download) */
@@ -681,7 +731,16 @@ export default function Home() {
           <div className="loading" role="status" aria-live="polite"><div className="spinner" aria-hidden="true"/><div>กำลังโหลด...</div></div>
         )}
 
-        {selectedGroup && !loading && mode === 'folders' && (
+        {selectedGroup && !loading && loadError && (
+          <div className="load-error" role="alert">
+            <div className="load-error-icon" aria-hidden="true">⚠️</div>
+            <div className="load-error-title">โหลดไม่สำเร็จ</div>
+            <div className="load-error-msg">{LOAD_ERROR_TEXT[loadError.kind] || LOAD_ERROR_TEXT.generic}</div>
+            <button type="button" className="retry-btn" onClick={retryLoad} disabled={loading}>↻ ลองใหม่</button>
+          </div>
+        )}
+
+        {selectedGroup && !loading && !loadError && mode === 'folders' && (
           <>
             <div className="section-title">{path.length === 0 ? '📁 เลือกงาน / อัลบั้ม' : '📂 เลือกหมวดหมู่'}</div>
             {folders.length === 0 ? (
@@ -709,7 +768,7 @@ export default function Home() {
           </>
         )}
 
-        {selectedGroup && !loading && mode === 'photos' && (
+        {selectedGroup && !loading && !loadError && mode === 'photos' && (
           <>
             <div className="toolbar">
               <div className="folder-header">
