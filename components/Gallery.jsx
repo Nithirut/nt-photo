@@ -127,7 +127,9 @@ export default function Gallery() {
       cont.scrollTo({ left: target, behavior: reduce ? 'auto' : 'smooth' });
     }
     updateBcFades();
-  }, [path]);
+    // Depend on `loading` too: re-apply once a heavy folder's content settles so the
+    // current crumb lands promptly (smooth animation isn't starved by the photo render).
+  }, [path, loading]);
 
   const markDownloaded = (ids) => {
     setDownloaded(prev => {
@@ -634,8 +636,8 @@ export default function Gallery() {
           }
           .fab-back:hover { background:rgba(30,27,20,0.9); border-color:#c9a84c; }
           .fab-back:focus-visible { outline:2px solid #c9a84c; outline-offset:2px; }
-          /* Select bar (bottom:0, ~90px tall) is open: float clear above it. */
-          .fab-back.raised { bottom:calc(104px + env(safe-area-inset-bottom)); }
+          /* Select bar (bottom:0, ~108px tall when wrapped) is open: float clear above it. */
+          .fab-back.raised { bottom:calc(120px + env(safe-area-inset-bottom)); }
           /* Mobile breadcrumb: relative for fades; bigger touch text; current widest. */
           .breadcrumb { position:relative; }
           .crumb { padding:9px 12px; font-size:14px; }
