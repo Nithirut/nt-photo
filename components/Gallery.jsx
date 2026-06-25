@@ -114,22 +114,27 @@ export default function Gallery() {
     });
   };
 
-  // When the path changes, bring the CURRENT crumb into view inside the breadcrumb's
-  // own horizontal scroller. Mobile/tablet only; scrolls the container (never the
-  // page), never moves focus, and uses non-smooth scrolling under reduced-motion.
+  // When the path/level changes, bring the CURRENT crumb into view inside the
+  // breadcrumb's own horizontal scroller. Mobile/tablet only. Deferred one frame so
+  // the breadcrumb has laid out; scrollIntoView with inline:'nearest' + block:'nearest'
+  // scrolls only the breadcrumb scroller (never the page) and never moves focus.
+  // Uses non-smooth scrolling under prefers-reduced-motion.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const cont = breadcrumbRef.current;
+    if (typeof window === 'undefined') return undefined;
+    if (!window.matchMedia('(max-width: 768px)').matches) { updateBcFades(); return undefined; }
     const cur = currentCrumbRef.current;
-    if (cont && cur && window.matchMedia('(max-width: 768px)').matches) {
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      const target = Math.max(0, cur.offsetLeft + cur.offsetWidth - cont.clientWidth + 16);
-      cont.scrollTo({ left: target, behavior: reduce ? 'auto' : 'smooth' });
-    }
-    updateBcFades();
-    // Depend on `loading` too: re-apply once a heavy folder's content settles so the
-    // current crumb lands promptly (smooth animation isn't starved by the photo render).
-  }, [path, loading]);
+    if (!cur) { updateBcFades(); return undefined; }
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const raf = requestAnimationFrame(() => {
+      try {
+        cur.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+      } catch (e) {
+        cur.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+      }
+      updateBcFades();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [path, loading, mode]);
 
   const markDownloaded = (ids) => {
     setDownloaded(prev => {
