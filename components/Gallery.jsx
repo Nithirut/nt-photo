@@ -115,26 +115,20 @@ export default function Gallery() {
   };
 
   // When the path/level changes, bring the CURRENT crumb into view inside the
-  // breadcrumb's own horizontal scroller. Mobile/tablet only. Deferred one frame so
-  // the breadcrumb has laid out; scrollIntoView with inline:'nearest' + block:'nearest'
-  // scrolls only the breadcrumb scroller (never the page) and never moves focus.
-  // Uses non-smooth scrolling under prefers-reduced-motion.
+  // breadcrumb's own horizontal scroller (mobile/tablet only). Uses a light, instant
+  // scrollLeft nudge — it touches ONLY the breadcrumb container (never the page),
+  // never moves focus, and is inherently reduced-motion friendly (no animation).
   useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    if (!window.matchMedia('(max-width: 768px)').matches) { updateBcFades(); return undefined; }
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(max-width: 768px)').matches) { updateBcFades(); return; }
+    const cont = breadcrumbRef.current;
     const cur = currentCrumbRef.current;
-    if (!cur) { updateBcFades(); return undefined; }
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const raf = requestAnimationFrame(() => {
-      try {
-        cur.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
-      } catch (e) {
-        cur.scrollIntoView({ inline: 'nearest', block: 'nearest' });
-      }
-      updateBcFades();
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [path, loading, mode]);
+    if (cont && cur) {
+      // Reveal the current crumb's right edge (it sits at the end of the path).
+      cont.scrollLeft = Math.max(0, cur.offsetLeft + cur.offsetWidth - cont.clientWidth + 16);
+    }
+    updateBcFades();
+  }, [path, mode]);
 
   const markDownloaded = (ids) => {
     setDownloaded(prev => {
