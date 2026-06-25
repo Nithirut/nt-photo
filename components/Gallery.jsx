@@ -74,6 +74,11 @@ export default function Gallery() {
   const reqIdRef = useRef(0);
   // Last requested location so "ลองใหม่" retries the same level (path/breadcrumb preserved).
   const lastLoadRef = useRef(null);
+  // Mobile breadcrumb: keep the CURRENT crumb visible inside the breadcrumb's own
+  // scroller (UI only — no change to path/goToDepth navigation logic).
+  const breadcrumbRef = useRef(null);
+  const currentCrumbRef = useRef(null);
+  const [bcFade, setBcFade] = useState({ left: false, right: false }); // edge scroll hints
 
   // Download memory + download size
   const [downloaded, setDownloaded] = useState(new Set());
@@ -98,6 +103,32 @@ export default function Gallery() {
       openGroup(FEATURED_GROUP);
     }
   }, []);
+
+  // Toggle the left/right fade hints based on the breadcrumb scroll position.
+  const updateBcFades = () => {
+    const cont = breadcrumbRef.current;
+    if (!cont) return;
+    setBcFade({
+      left: cont.scrollLeft > 4,
+      right: cont.scrollLeft + cont.clientWidth < cont.scrollWidth - 4,
+    });
+  };
+
+  // When the path/level changes, bring the CURRENT crumb into view inside the
+  // breadcrumb's own horizontal scroller (mobile/tablet only). Uses a light, instant
+  // scrollLeft nudge — it touches ONLY the breadcrumb container (never the page),
+  // never moves focus, and is inherently reduced-motion friendly (no animation).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(max-width: 768px)').matches) { updateBcFades(); return; }
+    const cont = breadcrumbRef.current;
+    const cur = currentCrumbRef.current;
+    if (cont && cur) {
+      // Reveal the current crumb's right edge (it sits at the end of the path).
+      cont.scrollLeft = Math.max(0, cur.offsetLeft + cur.offsetWidth - cont.clientWidth + 16);
+    }
+    updateBcFades();
+  }, [path, mode]);
 
   const markDownloaded = (ids) => {
     setDownloaded(prev => {
@@ -581,6 +612,40 @@ export default function Gallery() {
           }
           .photo-item:hover img { transform:none; }
           .folder-card:hover, .group-card:hover, .folder-card.cover:hover { transform:none; }
+          .fab-back { transition:none !important; }
+        }
+
+        /* ---- Mobile gallery navigation (breadcrumb visibility + floating back) ---- */
+        /* Desktop default: floating button and fade hints are off; the header back
+           button stays. Everything below only turns on at <=768px. */
+        .fab-back { display:none; }
+        .breadcrumb-fade { display:none; }
+        @media (max-width: 768px) {
+          /* Swap the hard-to-reach header back button for a thumb-friendly floating one
+             (never both at once). */
+          .back-btn { display:none; }
+          .fab-back {
+            display:inline-flex; align-items:center; gap:6px;
+            position:fixed; left:16px; bottom:calc(16px + env(safe-area-inset-bottom));
+            z-index:60; min-height:48px; padding:12px 18px; border-radius:26px;
+            background:rgba(18,16,12,0.82); border:1px solid rgba(201,168,76,0.55);
+            color:#f3ecd9; font-family:'NTLocalFont','Sarabun',sans-serif; font-size:14px; font-weight:600;
+            box-shadow:0 6px 20px rgba(0,0,0,0.5); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+            cursor:pointer; transition:background-color 0.18s ease, border-color 0.18s ease, bottom 0.2s ease;
+          }
+          .fab-back:hover { background:rgba(30,27,20,0.9); border-color:#c9a84c; }
+          .fab-back:focus-visible { outline:2px solid #c9a84c; outline-offset:2px; }
+          /* Select bar (bottom:0, ~108px tall when wrapped) is open: float clear above it. */
+          .fab-back.raised { bottom:calc(120px + env(safe-area-inset-bottom)); }
+          /* Mobile breadcrumb: relative for fades; bigger touch text; current widest. */
+          .breadcrumb { position:relative; }
+          .crumb { padding:9px 12px; font-size:14px; }
+          .crumb:not(.current) .crumb-label { max-width:30vw; }
+          .crumb.current .crumb-label { max-width:58vw; }
+          /* Light edge fades hint that the breadcrumb scrolls; never catch taps. */
+          .breadcrumb-fade { display:block; position:absolute; top:0; bottom:6px; width:22px; z-index:2; pointer-events:none; }
+          .breadcrumb-fade.left { left:0; background:linear-gradient(to right, #0a0a0a 30%, rgba(10,10,10,0)); }
+          .breadcrumb-fade.right { right:0; background:linear-gradient(to left, #0a0a0a 30%, rgba(10,10,10,0)); }
         }
       `}</style>
 
@@ -684,7 +749,9 @@ export default function Gallery() {
 
         {selectedGroup && path.length > 0 && (
           <nav className="breadcrumb" aria-label="Breadcrumb">
-            <ol className="breadcrumb-list">
+            {bcFade.left && <div className="breadcrumb-fade left" aria-hidden="true" />}
+            {bcFade.right && <div className="breadcrumb-fade right" aria-hidden="true" />}
+            <ol className="breadcrumb-list" ref={breadcrumbRef} onScroll={updateBcFades}>
               <li className="breadcrumb-item">
                 <button type="button" className="crumb" onClick={() => goToDepth(-1)}>
                   <span aria-hidden="true">🏠</span>
@@ -697,7 +764,7 @@ export default function Gallery() {
                   <li className="breadcrumb-item" key={node.id}>
                     <span className="crumb-sep" aria-hidden="true">›</span>
                     {isCurrent ? (
-                      <span className="crumb current" aria-current="page" title={node.name}>
+                      <span className="crumb current" aria-current="page" title={node.name} ref={currentCrumbRef}>
                         <span className="crumb-label">{node.name}</span>
                       </span>
                     ) : (
@@ -851,6 +918,20 @@ export default function Gallery() {
       </div>
 
       <div className="app-footer">Created by Nithirut Chirathiraphat<br/>NT 866</div>
+
+      {/* Floating folder-back (mobile/tablet): one level up via the existing back()
+          — same logic as the desktop header button. Hidden at root and while the
+          Download Tray modal is open; raised above the Select bar when active. */}
+      {selectedGroup && path.length > 0 && !trayOpen && (
+        <button
+          type="button"
+          className={`fab-back ${selectMode ? 'raised' : ''}`}
+          onClick={back}
+          aria-label="กลับไปโฟลเดอร์ก่อนหน้า"
+        >
+          <span aria-hidden="true">←</span> กลับ
+        </button>
+      )}
 
       {selectMode && (
         <div className="select-bar">
