@@ -1,19 +1,23 @@
 import { useState, useRef } from 'react';
 import { LEADER_UNITS, normalizeName, normalizeCtCode, validateLeaderForm } from '../lib/leaderAccess';
 
-// Agency Leader login form (shell phase). UI + client-side SHAPE validation
-// only — it never authenticates and never reveals eligibility. On submit it
-// posts normalized values to /api/leader/login, which currently returns
-// ACCESS_LIST_NOT_CONFIGURED; we simply surface that status message.
+// Agency Leader login form. UI + client-side SHAPE validation only; the real
+// eligibility decision and session are server-side. On success the API sets an
+// HttpOnly cookie and returns { ok:true } and we navigate to /leader. Failures
+// are generic and never reveal which field was wrong or whether a name exists.
 const FIELD_LABEL = { name: 'ชื่อจริง', unit: 'หน่วย', ctCode: 'รหัสทัพ' };
+const ERR_ELIGIBILITY = 'ข้อมูลไม่ตรงกับรายชื่อผู้มีสิทธิ์';
+const ERR_CONFIG = 'ระบบยังไม่พร้อมใช้งาน กรุณาติดต่อผู้ดูแล';
+const ERR_RATE = 'มีการพยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่';
+const ERR_NETWORK = 'ไม่สามารถเชื่อมต่อได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่';
 
 export default function LeaderLogin() {
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('');
   const [ctCode, setCtCode] = useState('');
-  const [fieldErrors, setFieldErrors] = useState([]); // field keys with problems
-  const [status, setStatus] = useState('idle');       // idle | submitting | error
-  const [message, setMessage] = useState('');          // server / user-facing text
+  const [fieldErrors, setFieldErrors] = useState([]);
+  const [status, setStatus] = useState('idle'); // idle | submitting | error
+  const [message, setMessage] = useState('');
   const nameRef = useRef(null);
   const unitRef = useRef(null);
   const ctRef = useRef(null);
@@ -31,7 +35,6 @@ export default function LeaderLogin() {
     if (errors.length > 0) {
       setStatus('error');
       setMessage('');
-      // Let the screen reader announce the summary, then move focus to it.
       requestAnimationFrame(() => { if (summaryRef.current) summaryRef.current.focus(); });
       return;
     }
@@ -43,14 +46,22 @@ export default function LeaderLogin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      let data = {};
-      try { data = await res.json(); } catch (e2) { data = {}; }
-      // The shell never authenticates; show the server's status message as-is.
+      if (res.ok) {
+        let data = {};
+        try { data = await res.json(); } catch (e2) { data = {}; }
+        if (data && data.ok) {
+          window.location.href = '/leader';
+          return;
+        }
+      }
+      // Map status → generic message (never reveal which field).
+      if (res.status === 503) setMessage(ERR_CONFIG);
+      else if (res.status === 429) setMessage(ERR_RATE);
+      else setMessage(ERR_ELIGIBILITY);
       setStatus('error');
-      setMessage((data && data.message) ? data.message : 'ขณะนี้ยังไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่ภายหลัง');
     } catch (e3) {
       setStatus('error');
-      setMessage('ไม่สามารถเชื่อมต่อได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+      setMessage(ERR_NETWORK);
     }
   };
 
@@ -119,7 +130,7 @@ export default function LeaderLogin() {
         <div className="leader-wordmark">NT <span>Photo</span></div>
         <h1 id="leader-title" className="leader-title">Login for Agency Leader Numthong</h1>
         <div className="leader-sub">NT ACADEMY</div>
-        <p className="leader-desc">กรอกข้อมูลเพื่อเข้าสู่พื้นที่กิจกรรมสำหรับผู้นำหน่วยหน่วยทอง</p>
+        <p className="leader-desc">กรอกข้อมูลเพื่อเข้าสู่พื้นที่กิจกรรมสำหรับผู้บริหารเครือนำทอง</p>
 
         {hasFieldErrors && (
           <div className="leader-error-summary" role="alert" tabIndex={-1} ref={summaryRef}>
@@ -175,7 +186,7 @@ export default function LeaderLogin() {
           </button>
         </form>
 
-        <p className="leader-privacy">พื้นที่ส่วนตัวสำหรับผู้นำหน่วยที่ได้รับสิทธิ์เท่านั้น</p>
+        <p className="leader-privacy">พื้นที่ส่วนตัวสำหรับผู้บริหารเครือนำทองที่ได้รับสิทธิ์เท่านั้น</p>
       </section>
     </main>
   );
