@@ -35,8 +35,7 @@ export default async function handler(req, res) {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ ok: false, code: 'METHOD_NOT_ALLOWED' });
   }
-  // Fail closed if NT_LEADER_SESSION_SECRET is not configured in this
-  // environment — never fall back to an unsigned or default secret.
+  // Fail closed if the session secret is not configured (no fallback).
   if (!isSessionConfigured()) {
     return res.status(503).json({ ok: false, code: 'CONFIG' });
   }
