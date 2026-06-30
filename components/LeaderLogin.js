@@ -76,12 +76,9 @@ export default function LeaderLogin() {
   return (
     <main className="leader-wrap">
       <style>{`
-        * { box-sizing:border-box; }
-        /* Full-bleed dark background: kill the default white viewport border
-           (browser body margin) only while the login page is mounted. */
-        html, body, #__next { margin:0; padding:0; }
-        html { background:#0a0a0a; color-scheme:dark; }
-        body { margin:0; background:#0a0a0a; overflow-x:hidden; }
+        /* Global viewport reset (margins, dark full-bleed background, box-sizing)
+           lives in styles/globals.css so every route is covered. Only
+           page-specific styles remain here. */
         .leader-wrap {
           width:100%; min-height:100vh; min-height:100dvh; overflow-x:hidden;
           background:radial-gradient(circle at 50% 0%, #15140f 0%, #0a0a0a 62%);

@@ -1,0 +1,41 @@
+/* ==========================================================================
+   Global viewport reset — removes the default white frame on EVERY route.
+   The browser default `body { margin: 8px }` plus the default white page
+   background were showing as a white border around the viewport. Setting a
+   single dark base on html/body/#__next makes the background continuous to the
+   very edges (incl. overscroll bounce and iOS safe-area insets) on all pages.
+   This is UI-only and does not affect any cards/content backgrounds.
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#__next {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  background-color: #0a0a0a; /* deep charcoal/black — same base as the app theme */
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#__next {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
