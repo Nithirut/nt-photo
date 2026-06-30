@@ -77,8 +77,13 @@ export default function LeaderLogin() {
     <main className="leader-wrap">
       <style>{`
         * { box-sizing:border-box; }
+        /* Full-bleed dark background: kill the default white viewport border
+           (browser body margin) only while the login page is mounted. */
+        html, body, #__next { margin:0; padding:0; }
+        html { background:#0a0a0a; color-scheme:dark; }
+        body { margin:0; background:#0a0a0a; overflow-x:hidden; }
         .leader-wrap {
-          min-height:100vh; min-height:100dvh;
+          width:100%; min-height:100vh; min-height:100dvh; overflow-x:hidden;
           background:radial-gradient(circle at 50% 0%, #15140f 0%, #0a0a0a 62%);
           color:#f0ece4; font-family:'Sarabun',sans-serif;
           display:flex; align-items:center; justify-content:center;
@@ -112,9 +117,17 @@ export default function LeaderLogin() {
         }
         .leader-field select {
           appearance:none; -webkit-appearance:none; padding-right:40px;
+          /* Solid dark fill + dark color-scheme so the native popup and its
+             options are legible (no white-on-white) on Windows/Chrome + mobile. */
+          background-color:#15140f; color:#f0ece4; -webkit-text-fill-color:#f0ece4;
+          color-scheme:dark; border-color:rgba(201,168,76,0.45);
           background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%23c9a84c' stroke-width='2'/%3E%3C/svg%3E");
           background-repeat:no-repeat; background-position:right 14px center;
         }
+        .leader-field select option {
+          background-color:#15140f; color:#f0ece4; -webkit-text-fill-color:#f0ece4;
+        }
+        .leader-field select:disabled { color:#cfc8ba; -webkit-text-fill-color:#cfc8ba; opacity:1; }
         .leader-field input::placeholder { color:#7d7565; }
         .leader-field input:focus-visible, .leader-field select:focus-visible { outline:2px solid #c9a84c; outline-offset:2px; border-color:#c9a84c; }
         .leader-field input[aria-invalid="true"], .leader-field select[aria-invalid="true"] { border-color:#d98b8b; }
@@ -188,7 +201,7 @@ export default function LeaderLogin() {
           </div>
 
           <button type="submit" className="leader-submit" disabled={submitting}>
-            {submitting ? 'กำลังตรวจสอบ…' : 'เข้าสู่ NT ACADEMY'}
+            {submitting ? 'กำลังตรวจสอบ…' : 'AL PHOTO'}
           </button>
         </form>
 
