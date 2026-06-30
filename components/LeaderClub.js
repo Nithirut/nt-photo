@@ -47,7 +47,9 @@ export default function LeaderClub() {
         .activity-kicker { font-size:11px; letter-spacing:3px; color:#c9a84c; text-transform:uppercase; }
         .activity-name { font-family:'Playfair Display',serif; font-size:20px; font-weight:700; margin:6px 0 4px; }
         .activity-status { font-size:13px; color:#cfc8ba; }
-        .activity-btn { margin-top:16px; min-height:48px; width:100%; border-radius:24px; border:1px solid rgba(255,255,255,0.16); background:rgba(255,255,255,0.05); color:#9a917f; font-family:'Sarabun',sans-serif; font-size:15px; font-weight:600; cursor:not-allowed; }
+        .activity-btn { margin-top:16px; min-height:48px; width:100%; border-radius:24px; border:none; background:#c9a84c; color:#1a1304; font-family:'Sarabun',sans-serif; font-size:15px; font-weight:700; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
+        .activity-btn:hover { background:#d8b95e; }
+        .activity-btn:focus-visible { outline:2px solid #fff; outline-offset:2px; }
         .club-foot { margin-top:18px; font-size:11px; color:#8a8273; text-align:center; line-height:1.6; }
         @media (prefers-reduced-motion: reduce) { .club-logout { transition:none; } }
       `}</style>
@@ -67,10 +69,8 @@ export default function LeaderClub() {
         <div className="activity" aria-labelledby="activity-name">
           <div className="activity-kicker">กิจกรรม</div>
           <div id="activity-name" className="activity-name">NT ACADEMY</div>
-          <div className="activity-status">กำลังเตรียมแกลเลอรี</div>
-          <button type="button" className="activity-btn" disabled aria-disabled="true">
-            เข้าสู่กิจกรรม (กำลังเตรียม)
-          </button>
+          <div className="activity-status">เปิดให้เข้าชมแล้ว</div>
+          <a className="activity-btn" href="/leader/gallery">เข้าสู่ NT ACADEMY</a>
         </div>
 
         <p className="club-foot">พื้นที่ส่วนตัวสำหรับผู้บริหารเครือนำทองที่ได้รับสิทธิ์เท่านั้น</p>
