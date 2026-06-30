@@ -1,19 +1,29 @@
 import { useState, useRef } from 'react';
-import { LEADER_UNITS, normalizeName, normalizeCtCode, validateLeaderForm } from '../lib/leaderAccess';
+import { LEADER_CT_CODES, normalizeName, normalizeCtCode, normalizeUnit, validateLeaderForm } from '../lib/leaderAccess';
 
-// Agency Leader login form (shell phase). UI + client-side SHAPE validation
-// only — it never authenticates and never reveals eligibility. On submit it
-// posts normalized values to /api/leader/login, which currently returns
-// ACCESS_LIST_NOT_CONFIGURED; we simply surface that status message.
-const FIELD_LABEL = { name: 'ชื่อจริง', unit: 'หน่วย', ctCode: 'รหัสทัพ' };
+// Agency Leader login form. UI + client-side SHAPE validation only; the real
+// eligibility decision and session are server-side. On success the API sets an
+// HttpOnly cookie and returns { ok:true } and we navigate to /leader. Failures
+// are generic and never reveal which field was wrong or whether a name exists.
+// The per-field messages below are FORMAT/required hints shown before submit —
+// they say nothing about eligibility.
+const FIELD_MSG = {
+  name: 'กรุณากรอกชื่อจริง',
+  unit: 'กรุณากรอกหน่วย 866 หรือ 1149',
+  ctCode: 'กรุณาเลือกรหัสทัพ',
+};
+const ERR_ELIGIBILITY = 'ข้อมูลไม่ตรงกับรายชื่อผู้มีสิทธิ์';
+const ERR_CONFIG = 'ระบบยังไม่พร้อมใช้งาน กรุณาติดต่อผู้ดูแล';
+const ERR_RATE = 'มีการพยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่';
+const ERR_NETWORK = 'ไม่สามารถเชื่อมต่อได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่';
 
 export default function LeaderLogin() {
   const [name, setName] = useState('');
   const [unit, setUnit] = useState('');
   const [ctCode, setCtCode] = useState('');
-  const [fieldErrors, setFieldErrors] = useState([]); // field keys with problems
-  const [status, setStatus] = useState('idle');       // idle | submitting | error
-  const [message, setMessage] = useState('');          // server / user-facing text
+  const [fieldErrors, setFieldErrors] = useState([]);
+  const [status, setStatus] = useState('idle'); // idle | submitting | error
+  const [message, setMessage] = useState('');
   const nameRef = useRef(null);
   const unitRef = useRef(null);
   const ctRef = useRef(null);
@@ -25,13 +35,12 @@ export default function LeaderLogin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (submitting) return;
-    const payload = { name: normalizeName(name), unit, ctCode: normalizeCtCode(ctCode) };
+    const payload = { name: normalizeName(name), unit: normalizeUnit(unit), ctCode: normalizeCtCode(ctCode) };
     const errors = validateLeaderForm(payload);
     setFieldErrors(errors);
     if (errors.length > 0) {
       setStatus('error');
       setMessage('');
-      // Let the screen reader announce the summary, then move focus to it.
       requestAnimationFrame(() => { if (summaryRef.current) summaryRef.current.focus(); });
       return;
     }
@@ -43,14 +52,22 @@ export default function LeaderLogin() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      let data = {};
-      try { data = await res.json(); } catch (e2) { data = {}; }
-      // The shell never authenticates; show the server's status message as-is.
+      if (res.ok) {
+        let data = {};
+        try { data = await res.json(); } catch (e2) { data = {}; }
+        if (data && data.ok) {
+          window.location.href = '/leader';
+          return;
+        }
+      }
+      // Map status → generic message (never reveal which field).
+      if (res.status === 503) setMessage(ERR_CONFIG);
+      else if (res.status === 429) setMessage(ERR_RATE);
+      else setMessage(ERR_ELIGIBILITY);
       setStatus('error');
-      setMessage((data && data.message) ? data.message : 'ขณะนี้ยังไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่ภายหลัง');
     } catch (e3) {
       setStatus('error');
-      setMessage('ไม่สามารถเชื่อมต่อได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+      setMessage(ERR_NETWORK);
     }
   };
 
@@ -119,11 +136,11 @@ export default function LeaderLogin() {
         <div className="leader-wordmark">NT <span>Photo</span></div>
         <h1 id="leader-title" className="leader-title">Login for Agency Leader Numthong</h1>
         <div className="leader-sub">NT ACADEMY</div>
-        <p className="leader-desc">กรอกข้อมูลเพื่อเข้าสู่พื้นที่กิจกรรมสำหรับผู้นำหน่วยหน่วยทอง</p>
+        <p className="leader-desc">กรอกข้อมูลเพื่อเข้าสู่พื้นที่กิจกรรมสำหรับผู้บริหารเครือนำทอง</p>
 
         {hasFieldErrors && (
           <div className="leader-error-summary" role="alert" tabIndex={-1} ref={summaryRef}>
-            กรุณากรอกข้อมูลให้ครบถ้วน: {fieldErrors.map((k) => FIELD_LABEL[k]).join(', ')}
+            {fieldErrors.map((k) => FIELD_MSG[k]).join(' · ')}
           </div>
         )}
         {status === 'error' && message && (
@@ -145,29 +162,29 @@ export default function LeaderLogin() {
 
           <div className="leader-field">
             <label htmlFor="leader-unit">หน่วย</label>
-            <select
-              id="leader-unit" ref={unitRef} value={unit}
-              onChange={(e) => setUnit(e.target.value)}
+            <input
+              id="leader-unit" ref={unitRef} type="text"
+              inputMode="numeric" pattern="[0-9]*" autoComplete="off"
+              placeholder="866 หรือ 1149" value={unit}
+              onChange={(e) => setUnit(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
               required aria-required="true" aria-invalid={invalid('unit')}
               aria-describedby="leader-unit-help" disabled={submitting}
-            >
-              <option value="" disabled>เลือกหน่วย</option>
-              {LEADER_UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-            </select>
-            <div id="leader-unit-help" className="leader-help">เลือกหน่วยของคุณ</div>
+            />
+            <div id="leader-unit-help" className="leader-help">กรอกหน่วยเป็นตัวเลข: 866 หรือ 1149</div>
           </div>
 
           <div className="leader-field">
             <label htmlFor="leader-ct">รหัสทัพ</label>
-            <input
-              id="leader-ct" ref={ctRef} type="text" autoComplete="off"
-              placeholder="เช่น CT1" value={ctCode}
+            <select
+              id="leader-ct" ref={ctRef} value={ctCode}
               onChange={(e) => setCtCode(e.target.value)}
               required aria-required="true" aria-invalid={invalid('ctCode')}
               aria-describedby="leader-ct-help" disabled={submitting}
-              style={{ textTransform: 'uppercase' }}
-            />
-            <div id="leader-ct-help" className="leader-help">เช่น CT1 (ระบบจะแปลงเป็นตัวพิมพ์ใหญ่ให้อัตโนมัติ)</div>
+            >
+              <option value="" disabled>เลือกรหัสทัพ</option>
+              {LEADER_CT_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <div id="leader-ct-help" className="leader-help">เลือกรหัสทัพของคุณ (CT1–CT15)</div>
           </div>
 
           <button type="submit" className="leader-submit" disabled={submitting}>
@@ -175,7 +192,7 @@ export default function LeaderLogin() {
           </button>
         </form>
 
-        <p className="leader-privacy">พื้นที่ส่วนตัวสำหรับผู้นำหน่วยที่ได้รับสิทธิ์เท่านั้น</p>
+        <p className="leader-privacy">พื้นที่ส่วนตัวสำหรับผู้บริหารเครือนำทองที่ได้รับสิทธิ์เท่านั้น</p>
       </section>
     </main>
   );
