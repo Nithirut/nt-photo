@@ -32,8 +32,10 @@ export default function PhotographyCredits() {
         .pc-grid { display:grid; grid-template-columns:1fr; gap:20px; }
         @media (min-width:640px){ .pc-grid { grid-template-columns:1fr 1fr; gap:24px; } }
         .pc-card { background:linear-gradient(135deg,#1a1a1a,#141414); border:1px solid rgba(201,168,76,0.22); border-radius:16px; overflow:hidden; display:flex; flex-direction:column; }
-        .pc-photo { aspect-ratio:4/5; background:#141414; }
-        .pc-photo img { width:100%; height:100%; object-fit:cover; object-position:center top; display:block; }
+        /* 2/3 matches BEER-4 (1023x1537 ≈ 2:3) exactly → no vertical crop, camera preserved.
+           Lookkeaw-4 (1122x1402 ≈ 4:5) only loses small equal side margins; subject stays centered. */
+        .pc-photo { aspect-ratio:2/3; background:#141414; }
+        .pc-photo img { width:100%; height:100%; object-fit:cover; object-position:center; display:block; }
         .pc-body { padding:16px 18px 20px; }
         .pc-nick { font-family:'Playfair Display',serif; color:#c9a84c; font-size:20px; font-weight:700; line-height:1.2; }
         .pc-name { color:#e7dfce; font-family:'Sarabun',sans-serif; font-size:14px; margin-top:3px; }
