@@ -15,7 +15,7 @@ const PHOTOGRAPHERS = [
     key: 'lookkeaw',
     img: '/photographers/Lookkeaw-4.png',
     nickname: 'ลูกแก้ว',
-    name: null,
+    name: 'นิธิรุจน์ จิราธีระพัฒน์',
     roles: ['Second Shooter', 'Gallery Creator'],
     credits: ['LICA Photo Team', 'NT Photo Team', 'NT866'],
   },
