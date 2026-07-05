@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { NUMTHONG_GROUP } from '../lib/ntPhotoConfig';
+import PhotographyCredits from './PhotographyCredits';
 
 // User-facing load-error messages (Thai). No internal/security details are exposed.
 const LOAD_ERROR_TEXT = {
@@ -916,6 +917,8 @@ export default function Gallery() {
           </>
         )}
       </div>
+
+      <PhotographyCredits />
 
       <div className="app-footer">Created by Nithirut Chirathiraphat<br/>NT 866</div>
 
