@@ -1,23 +1,23 @@
 // Photography Credits — NT Photo team showcase.
 // Static, confirmed data only: two photographers in the approved order
-// (Beer, then Lookkeaw). No placeholders, no unconfirmed names/roles.
-// Matches the NT Photo premium dark/gold style used across the site.
+// (Beer, then Lookkeaw). Roles and team/credits are rendered as premium
+// dark-gold badges (non-interactive). No placeholders, no unconfirmed data.
 const PHOTOGRAPHERS = [
   {
     key: 'beer',
     img: '/photographers/BEER-4.png',
     nickname: 'เบียร์',
     name: 'รัชภูมิ มั่งคั่ง',
-    role: 'Main Photographer, Lead Photographer',
-    credits: 'NT Photo Team, Open House, NT1346',
+    roles: ['Main Photographer', 'Lead Photographer'],
+    credits: ['NT Photo Team', 'Open House', 'NT1346'],
   },
   {
     key: 'lookkeaw',
     img: '/photographers/Lookkeaw-4.png',
     nickname: 'ลูกแก้ว',
     name: null,
-    role: 'Second Shooter, Gallery Creator',
-    credits: 'LICA Photo Team, NT Photo Team, NT866',
+    roles: ['Second Shooter', 'Gallery Creator'],
+    credits: ['LICA Photo Team', 'NT Photo Team', 'NT866'],
   },
 ];
 
@@ -39,8 +39,13 @@ export default function PhotographyCredits() {
         .pc-body { padding:16px 18px 20px; }
         .pc-nick { font-family:'Playfair Display',serif; color:#c9a84c; font-size:20px; font-weight:700; line-height:1.2; }
         .pc-name { color:#e7dfce; font-family:'Sarabun',sans-serif; font-size:14px; margin-top:3px; }
-        .pc-role { color:#f0ece4; font-family:'Sarabun',sans-serif; font-size:14px; font-weight:600; margin-top:12px; }
-        .pc-credits { color:#9a917f; font-family:'Sarabun',sans-serif; font-size:13px; line-height:1.6; margin-top:6px; }
+        /* Non-interactive badge groups. Roles read as the primary group; team/credits secondary. */
+        .pc-badges { display:flex; flex-wrap:wrap; gap:6px; }
+        .pc-badges.roles { margin-top:14px; }
+        .pc-badges.team { margin-top:8px; }
+        .pc-badge { display:inline-flex; align-items:center; border-radius:999px; padding:4px 11px; font-family:'Sarabun',sans-serif; font-size:12px; line-height:1.35; white-space:nowrap; cursor:default; }
+        .pc-badge.role { background:rgba(201,168,76,0.12); border:1px solid rgba(201,168,76,0.55); color:#f3e6c0; font-weight:600; }
+        .pc-badge.credit { background:#1c1b17; border:1px solid rgba(201,168,76,0.26); color:#cfc8ba; font-weight:400; }
       `}</style>
       <div className="pc-inner">
         <div className="pc-kicker">Photography</div>
@@ -55,8 +60,16 @@ export default function PhotographyCredits() {
               <div className="pc-body">
                 <div className="pc-nick">{p.nickname}</div>
                 {p.name && <div className="pc-name">{p.name}</div>}
-                <div className="pc-role">{p.role}</div>
-                <div className="pc-credits">{p.credits}</div>
+                <div className="pc-badges roles" aria-label="บทบาท">
+                  {p.roles.map((r) => (
+                    <span className="pc-badge role" key={r}>{r}</span>
+                  ))}
+                </div>
+                <div className="pc-badges team" aria-label="ทีม / เครดิต">
+                  {p.credits.map((c) => (
+                    <span className="pc-badge credit" key={c}>{c}</span>
+                  ))}
+                </div>
               </div>
             </article>
           ))}
