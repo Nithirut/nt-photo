@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { NUMTHONG_GROUP } from '../lib/ntPhotoConfig';
+import AdaptivePosterCard from './AdaptivePosterCard';
+import PhotographyCredits from './PhotographyCredits';
 
 // User-facing load-error messages (Thai). No internal/security details are exposed.
 const LOAD_ERROR_TEXT = {
@@ -822,20 +824,15 @@ export default function Gallery() {
             ) : (
               <div className="folder-grid">
                 {folders.map(folder => (
-                  <div key={folder.id} className={`folder-card ${folder.coverId ? 'cover' : ''}`} onClick={() => openNode(folder)}>
-                    {folder.coverId ? (
-                      <>
-                        <img className="folder-cover-img" src={`https://drive.google.com/thumbnail?id=${folder.coverId}&sz=w800`} alt={folder.name} loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; }} />
-                        <div className="folder-cover-grad" />
-                        <div className="folder-name">{folder.name}</div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="folder-icon">{path.length === 0 ? '📸' : '📁'}</div>
-                        <div className="folder-name">{folder.name}</div>
-                      </>
-                    )}
-                  </div>
+                  <AdaptivePosterCard
+                    key={folder.id}
+                    title={folder.name}
+                    alt={folder.name}
+                    hasPoster={!!folder.coverId}
+                    src={folder.coverId ? `https://drive.google.com/thumbnail?id=${folder.coverId}&sz=w800` : undefined}
+                    folderIcon={path.length === 0 ? '📸' : '📁'}
+                    onClick={() => openNode(folder)}
+                  />
                 ))}
               </div>
             )}
@@ -916,6 +913,8 @@ export default function Gallery() {
           </>
         )}
       </div>
+
+      <PhotographyCredits />
 
       <div className="app-footer">Created by Nithirut Chirathiraphat<br/>NT 866</div>
 
