@@ -54,8 +54,19 @@ const sortMainAlbums = (list) => {
   return [...list].sort((a, b) => rank(a.name) - rank(b.name));
 };
 
+// Homepage "Latest Events": display date parsed from the folder-name prefix
+// YYYY-MM-DD (Buddhist year, kept as-is). Non-date names render no date label.
+const THAI_MONTHS = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const formatEventDate = (iso) => {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return '';
+  return `${+m[3]} ${THAI_MONTHS[+m[2]] || ''} ${m[1]}`.trim();
+};
+
 export default function Gallery() {
   const [selectedGroup, setSelectedGroup] = useState(null);
+  // Homepage "Latest Events": newest activities across all albums (metadata only).
+  const [latestEvents, setLatestEvents] = useState([]);
   const [path, setPath] = useState([]);        // navigation stack: folder nodes inside the group
   const [folders, setFolders] = useState([]);  // folder cards at the current level
   const [mode, setMode] = useState(null);      // 'folders' | 'photos'
@@ -104,6 +115,16 @@ export default function Gallery() {
     if (SINGLE_GROUP_MODE && FEATURED_GROUP) {
       openGroup(FEATURED_GROUP);
     }
+    // Latest Events: ONE small metadata request (folders + covers only, no photos).
+    // Fails silent — the album section and the rest of the page are unaffected.
+    (async () => {
+      try {
+        const r = await fetch('/api/drive?type=latest');
+        if (!r.ok) return;
+        const d = await r.json();
+        if (Array.isArray(d.events)) setLatestEvents(d.events);
+      } catch (e) { /* ignore: Latest Events is a non-critical enhancement */ }
+    })();
   }, []);
 
   // Toggle the left/right fade hints based on the breadcrumb scroll position.
@@ -202,6 +223,15 @@ export default function Gallery() {
   const openNode = (folder) => {
     setPath(prev => [...prev, { id: folder.id, name: folder.name }]);
     loadLevel(folder.id);
+  };
+
+  // Latest Events card → open the activity's gallery DIRECTLY (skip the album
+  // level). The breadcrumb is set to Album > Activity so back / breadcrumb jumps
+  // behave exactly like normal navigation. Reuses the same loadLevel path.
+  const openActivityDirect = (ev) => {
+    if (FEATURED_GROUP) setSelectedGroup(FEATURED_GROUP);
+    setPath([{ id: ev.albumId, name: ev.albumName }, { id: ev.id, name: ev.name }]);
+    loadLevel(ev.id);
   };
 
   // Breadcrumb jump: index === -1 → group root (album list); otherwise jump to path[index].
@@ -377,6 +407,18 @@ export default function Gallery() {
         .line-warning-title { font-family:'NTLocalFont','Sarabun',sans-serif; font-size:14px; font-weight:700; color:#c9a84c; margin-bottom:6px; }
         .line-warning-text { font-family:'NTLocalFont','Sarabun',sans-serif; font-size:13px; color:#cfc8ba; line-height:1.65; }
         .section-title { font-family:'Playfair Display',serif; font-size:13px; color:#c9a84c; letter-spacing:4px; text-transform:uppercase; margin-bottom:16px; }
+        /* Latest Events (homepage): reuses AdaptivePosterCard; adds date + album
+           badge below each card. Mobile-first 2-up grid, 4-up on wider screens. */
+        .latest { margin:0 auto 30px; }
+        .latest-head { margin-bottom:16px; }
+        .latest-title { margin-bottom:6px; }
+        .latest-sub { font-family:'Sarabun',sans-serif; font-size:13px; color:#9a917f; letter-spacing:normal; text-transform:none; }
+        .latest-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+        @media (min-width:700px){ .latest-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; } }
+        .latest-cell { display:flex; flex-direction:column; min-width:0; }
+        .latest-meta { margin-top:8px; display:flex; flex-direction:column; align-items:center; gap:5px; }
+        .latest-date { font-family:'Sarabun',sans-serif; font-size:12px; color:#cfc8ba; line-height:1.3; }
+        .latest-album { font-family:'Sarabun',sans-serif; font-size:11px; color:#c9a84c; background:rgba(201,168,76,0.12); border:1px solid rgba(201,168,76,0.4); border-radius:999px; padding:2px 10px; letter-spacing:0.2px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         /* Breadcrumb: accessible nav + own horizontal scroll on mobile (never the whole page) */
         .breadcrumb { margin-bottom:18px; }
         .breadcrumb-list {
@@ -801,6 +843,33 @@ export default function Gallery() {
               <div className="howto-note">บนมือถือ บางเครื่องอาจถามยืนยันการดาวน์โหลดทีละรูป</div>
             </div>
           </>
+        )}
+
+        {atRoot && SINGLE_GROUP_MODE && latestEvents.length > 0 && (
+          <section className="latest" aria-labelledby="latest-title">
+            <div className="latest-head">
+              <div className="section-title latest-title" id="latest-title">กิจกรรมล่าสุด</div>
+              <div className="latest-sub">รวมภาพบรรยากาศจากกิจกรรมล่าสุดของ NUMTHONG</div>
+            </div>
+            <div className="latest-grid">
+              {latestEvents.map((ev) => (
+                <div className="latest-cell" key={ev.id}>
+                  <AdaptivePosterCard
+                    title={ev.name}
+                    alt={ev.name}
+                    hasPoster={!!ev.coverId}
+                    src={ev.coverId ? `https://drive.google.com/thumbnail?id=${ev.coverId}&sz=w800` : undefined}
+                    folderIcon="📸"
+                    onClick={() => openActivityDirect(ev)}
+                  />
+                  <div className="latest-meta">
+                    {ev.date && <span className="latest-date">{formatEventDate(ev.date)}</span>}
+                    {ev.albumName && <span className="latest-album">{ev.albumName}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {selectedGroup && loading && (
