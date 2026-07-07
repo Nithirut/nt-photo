@@ -39,6 +39,14 @@ function isSystemFolder(name) {
   return typeof name === 'string' && name.startsWith('_');
 }
 
+// ---- Album cover (POSTER) files --------------------------------------------
+// The album cover is a file named exactly POSTER.jpg / POSTER.jpeg / POSTER.png
+// / POSTER.webp (case-insensitive). One shared matcher is used BOTH to pick the
+// cover and to hide that same file from the album's photo grid, so detection and
+// exclusion can never drift apart. Rejects group_poster.jpg, poster.jpg.bak,
+// poster.gif, and any name with a prefix/suffix around POSTER.<ext>.
+const isPosterFile = (name = '') => /^poster\.(jpe?g|png|webp)$/i.test(String(name).trim());
+
 async function getDriveClient() {
   const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
   const auth = new google.auth.GoogleAuth({
@@ -124,15 +132,16 @@ export default async function handler(req, res) {
       if (folders.length > 0) {
         try {
           const parentClause = folders.map((f) => `'${f.id}' in parents`).join(' or ');
-          const posterNames = ['POSTER.JPG','poster.jpg','Poster.jpg','POSTER.jpg','Poster.JPG','poster.JPG','POSTER.PNG','poster.png','Poster.png'];
-          const nameClause = posterNames.map((n) => `name='${n}'`).join(' or ');
+          // Prefix-match 'poster' in Drive (case-insensitive), then keep only
+          // exact POSTER.<supported-ext> files via the shared matcher.
           const posterRes = await drive.files.list({
-            q: `(${parentClause}) and (${nameClause}) and mimeType contains 'image/' and trashed=false`,
+            q: `(${parentClause}) and (name contains 'poster') and mimeType contains 'image/' and trashed=false`,
             fields: 'files(id, name, parents)',
             pageSize: 100,
           });
           const coverByParent = {};
           for (const p of (posterRes.data.files || [])) {
+            if (!isPosterFile(p.name)) continue;
             for (const par of (p.parents || [])) {
               if (!coverByParent[par]) coverByParent[par] = p.id;
             }
@@ -172,10 +181,7 @@ export default async function handler(req, res) {
         pageToken = response.data.nextPageToken;
       } while (pageToken);
 
-      const photos = allFiles.filter((p) => {
-        const n = (p.name || '').trim().toLowerCase();
-        return n !== 'poster.jpg' && n !== 'poster.jpeg' && n !== 'poster.png';
-      });
+      const photos = allFiles.filter((p) => !isPosterFile(p.name));
 
       const captureTs = (p) => {
         const t = p.imageMediaMetadata && p.imageMediaMetadata.time;
