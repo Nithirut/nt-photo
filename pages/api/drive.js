@@ -208,6 +208,89 @@ export default async function handler(req, res) {
       return res.status(200).json({ photos });
     }
 
+    if (type === 'latest') {
+      // Homepage "Latest Events": the newest activity folders across ALL albums.
+      // Reads ONLY folder metadata + POSTER covers (never photo lists), so the
+      // homepage stays cheap. The event date comes from the folder-name prefix
+      // YYYY-MM-DD (Buddhist year) — NEVER from Drive created/modified time.
+      const root = NUMTHONG_ROOT_ID;
+      if (!isValidDriveId(root)) return res.status(400).json({ error: 'Invalid folder id' });
+      if (!(await isUnderAllowedRoot(drive, root, allowedRoots, memo))) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      // 1) Album folders (direct children of the NUMTHONG root), system-hidden removed.
+      const albumRes = await drive.files.list({
+        q: `'${root}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+        fields: 'files(id, name)',
+        pageSize: 50,
+      });
+      const albums = (albumRes.data.files || []).filter((a) => !isSystemFolder(a.name));
+
+      // 2) Activity folders inside each album, each tagged with its source album.
+      const activities = [];
+      for (const album of albums) {
+        const actRes = await drive.files.list({
+          q: `'${album.id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+          fields: 'files(id, name)',
+          pageSize: 100,
+        });
+        for (const f of (actRes.data.files || [])) {
+          if (isSystemFolder(f.name)) continue;
+          activities.push({ id: f.id, name: f.name, albumId: album.id, albumName: album.name });
+        }
+      }
+
+      // 3) Date strictly from the folder-name prefix YYYY-MM-DD (Buddhist year).
+      //    No readable date -> null, and such folders sort to the very end.
+      const parseFolderDate = (name = '') => {
+        const m = String(name).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? { iso: `${m[1]}-${m[2]}-${m[3]}`, key: +m[1] * 10000 + +m[2] * 100 + +m[3] } : null;
+      };
+      for (const a of activities) {
+        const dt = parseFolderDate(a.name);
+        a.date = dt ? dt.iso : null;
+        a._key = dt ? dt.key : -1;
+      }
+
+      // 4) Newest first by (year, month, day); undated last. Deterministic name tiebreak.
+      activities.sort((a, b) => (b._key - a._key) || (b.name || '').localeCompare(a.name || ''));
+
+      // 5) Keep only the newest N, then resolve POSTER covers for just those folders.
+      const LATEST_LIMIT = 4;
+      const latest = activities.slice(0, LATEST_LIMIT);
+      if (latest.length > 0) {
+        try {
+          const parentClause = latest.map((f) => `'${f.id}' in parents`).join(' or ');
+          const posterRes = await drive.files.list({
+            q: `(${parentClause}) and (name contains 'poster') and mimeType contains 'image/' and trashed=false`,
+            fields: 'files(id, name, parents)',
+            pageSize: 100,
+          });
+          const coverByParent = {};
+          for (const p of (posterRes.data.files || [])) {
+            if (!isPosterFile(p.name)) continue;
+            for (const par of (p.parents || [])) {
+              if (!coverByParent[par]) coverByParent[par] = p.id;
+            }
+          }
+          for (const f of latest) {
+            if (coverByParent[f.id]) f.coverId = coverByParent[f.id];
+          }
+        } catch (coverErr) {
+          console.error('Latest-events cover lookup failed (continuing without covers):', coverErr && coverErr.message);
+        }
+      }
+
+      const events = latest.map((f) => ({
+        id: f.id, name: f.name, albumId: f.albumId, albumName: f.albumName,
+        date: f.date, coverId: f.coverId || null,
+      }));
+
+      setSuccessCacheHeaders(res);
+      return res.status(200).json({ events });
+    }
+
     return res.status(400).json({ error: 'Invalid request' });
   } catch (error) {
     console.error('drive route error:', error && error.message);
