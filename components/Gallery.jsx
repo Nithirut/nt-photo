@@ -97,6 +97,32 @@ export default function Gallery() {
   const [downloaded, setDownloaded] = useState(new Set());
   const [dlSize, setDlSize] = useState('full'); // 'full' | 'social'
 
+  // ---- Browser Back navigation (history-state controller) -------------------
+  // The gallery is state-driven (no URL routing). To make the browser Back button
+  // and mobile swipe-back step BACK THROUGH THE GALLERY (close viewer/tray, then
+  // Activity -> Album -> Home) instead of leaving the site, we mirror the current
+  // "view" into window.history. Each forward navigation pushes one entry carrying
+  // a snapshot { p: pathNodes, ov: 'lightbox'|'tray'|null }; popstate re-applies it.
+  // Home is the base entry (replaceState), so Back from Home exits normally. Live
+  // state is mirrored into refs so the single popstate listener reads current values
+  // (no stale closures, no per-render pushes).
+  const NT_HIST = 'ntNav';
+  const pathRef = useRef(path); pathRef.current = path;
+  const lightboxRef = useRef(lightbox); lightboxRef.current = lightbox;
+  const trayRef = useRef(trayOpen); trayRef.current = trayOpen;
+  const selectedGroupRef = useRef(selectedGroup); selectedGroupRef.current = selectedGroup;
+  const applyNavRef = useRef(() => {});
+  const pushNav = (view) => {
+    if (typeof window === 'undefined') return;
+    try { window.history.pushState({ [NT_HIST]: true, ...view }, ''); } catch (e) {}
+  };
+  const replaceNav = (view) => {
+    if (typeof window === 'undefined') return;
+    try { window.history.replaceState({ [NT_HIST]: true, ...view }, ''); } catch (e) {}
+  };
+  const goBackHistory = () => { if (typeof window !== 'undefined') window.history.back(); };
+  goBackHistory.step = (n) => { if (typeof window !== 'undefined' && n > 0) window.history.go(-n); };
+
   const totalPages = Math.ceil(photos.length / PHOTOS_PER_PAGE);
   const pageStart = (currentPage - 1) * PHOTOS_PER_PAGE;
   const pagePhotos = photos.slice(pageStart, pageStart + PHOTOS_PER_PAGE);
@@ -115,6 +141,17 @@ export default function Gallery() {
     if (SINGLE_GROUP_MODE && FEATURED_GROUP) {
       openGroup(FEATURED_GROUP);
     }
+    // Mark the Home view as the base history entry (replace, not push) so Back from
+    // Home exits the site normally, while Back from anywhere deeper is intercepted.
+    replaceNav({ p: [], ov: null });
+    // Single popstate listener (attached once). It delegates to the latest reconciler
+    // via a ref, so it never holds a stale closure. Entries without our marker are
+    // ignored (Back past Home lets the browser leave normally).
+    const onPop = (e) => {
+      const st = e && e.state;
+      if (st && st[NT_HIST]) applyNavRef.current(st);
+    };
+    window.addEventListener('popstate', onPop);
     // Latest Events: ONE small metadata request (folders + covers only, no photos).
     // Fails silent — the album section and the rest of the page are unaffected.
     (async () => {
@@ -125,6 +162,7 @@ export default function Gallery() {
         if (Array.isArray(d.events)) setLatestEvents(d.events);
       } catch (e) { /* ignore: Latest Events is a non-critical enhancement */ }
     })();
+    return () => window.removeEventListener('popstate', onPop);
   }, []);
 
   // Toggle the left/right fade hints based on the breadcrumb scroll position.
@@ -219,34 +257,77 @@ export default function Gallery() {
     loadLevel(group.folderId, true);
   };
 
-  // Click any folder card at any depth — push onto the stack and load its level.
-  const openNode = (folder) => {
-    setPath(prev => [...prev, { id: folder.id, name: folder.name }]);
-    loadLevel(folder.id);
-  };
-
-  // Latest Events card → open the activity's gallery DIRECTLY (skip the album
-  // level). The breadcrumb is set to Album > Activity so back / breadcrumb jumps
-  // behave exactly like normal navigation. Reuses the same loadLevel path.
-  const openActivityDirect = (ev) => {
-    if (FEATURED_GROUP) setSelectedGroup(FEATURED_GROUP);
-    setPath([{ id: ev.albumId, name: ev.albumName }, { id: ev.id, name: ev.name }]);
-    loadLevel(ev.id);
-  };
-
-  // Breadcrumb jump: index === -1 → group root (album list); otherwise jump to path[index].
-  const goToDepth = (index) => {
-    if (index < 0) {
-      setPath([]);
-      if (selectedGroup) loadLevel(selectedGroup.folderId, true);
+  // Apply a path snapshot to React state + load that level. Used by BOTH forward
+  // navigation and by popstate reconciliation, so it never touches history itself.
+  const applyPath = (p) => {
+    setPath(p);
+    if (p.length === 0) {
+      const g = selectedGroupRef.current;
+      if (g) loadLevel(g.folderId, true);
     } else {
-      const node = path[index];
-      setPath(path.slice(0, index + 1));
-      loadLevel(node.id);
+      loadLevel(p[p.length - 1].id);
     }
   };
 
+  // Reconcile the live view to a history snapshot (called on popstate). Closes any
+  // overlay not present in the target, (re)opens one that is, and only reloads the
+  // level when the path actually changed (overlay-only changes cause no fetch).
+  const applyNav = (st) => {
+    const targetPath = Array.isArray(st.p) ? st.p : [];
+    const targetOv = st.ov || null;
+    if (targetOv !== 'tray' && trayRef.current) { setTrayOpen(false); setTrayPhotos([]); }
+    if (targetOv !== 'lightbox' && lightboxRef.current !== null) setLightbox(null);
+    if (targetOv === 'lightbox' && lightboxRef.current === null && typeof st.idx === 'number') setLightbox(st.idx);
+    const cur = pathRef.current;
+    const samePath = cur.length === targetPath.length && cur.every((n, i) => n.id === targetPath[i].id);
+    if (!samePath) applyPath(targetPath);
+  };
+  applyNavRef.current = applyNav;
+
+  // Click any folder card at any depth — push onto the stack and load its level.
+  const openNode = (folder) => {
+    const next = [...path, { id: folder.id, name: folder.name }];
+    setPath(next);
+    loadLevel(folder.id);
+    pushNav({ p: next, ov: null });
+  };
+
+  // Latest Events card → open the activity's gallery DIRECTLY (skip the album
+  // level). The breadcrumb is set to Album > Activity. Two history entries are
+  // pushed (album, then activity) so browser Back steps Activity -> Album -> Home,
+  // matching normal navigation; the album level is only fetched if the user backs
+  // into it.
+  const openActivityDirect = (ev) => {
+    if (FEATURED_GROUP) setSelectedGroup(FEATURED_GROUP);
+    const alb = { id: ev.albumId, name: ev.albumName };
+    const act = { id: ev.id, name: ev.name };
+    setPath([alb, act]);
+    loadLevel(ev.id);
+    pushNav({ p: [alb], ov: null });
+    pushNav({ p: [alb, act], ov: null });
+  };
+
+  // Breadcrumb jump: index === -1 → group root (album list); otherwise jump to
+  // path[index]. Implemented via history.go so the browser stack stays in sync;
+  // the actual view change happens in the popstate reconciler.
+  const goToDepth = (index) => {
+    const targetLen = index < 0 ? 0 : index + 1;
+    const delta = path.length - targetLen;
+    if (delta > 0) goBackHistory.step(delta);
+    // delta === 0: already at that level; delta < 0 never happens (breadcrumb only goes up)
+  };
+
   const back = () => goToDepth(path.length - 2);
+
+  // Photo Viewer open/close routed through history so browser Back closes it first.
+  const openLightbox = (idx) => {
+    setLightbox(idx);
+    pushNav({ p: pathRef.current, ov: 'lightbox', idx });
+  };
+  const closeLightbox = () => {
+    if (lightboxRef.current !== null) goBackHistory();
+    else setLightbox(null);
+  };
 
   const backToGroups = () => {
     setSelectedGroup(null);
@@ -314,7 +395,7 @@ export default function Gallery() {
     if (selectMode) {
       toggleSelect(photo.id);
     } else {
-      setLightbox(pageStart + pageIndex);
+      openLightbox(pageStart + pageIndex);
     }
   };
 
@@ -339,11 +420,14 @@ export default function Gallery() {
     if (selected.size === 0) return;
     setTrayPhotos(photos.filter(p => selected.has(p.id)));
     setTrayOpen(true);
+    pushNav({ p: pathRef.current, ov: 'tray' });
   };
 
   const closeTray = () => {
-    setTrayOpen(false);
-    setTrayPhotos([]);
+    // Route through history so the browser Back stack stays balanced; the popstate
+    // reconciler performs the actual close. Fallback closes directly if needed.
+    if (trayRef.current) goBackHistory();
+    else { setTrayOpen(false); setTrayPhotos([]); }
   };
 
   const changePage = (page) => {
@@ -696,8 +780,8 @@ export default function Gallery() {
       {maxAlert && <div className="max-alert">⚠️ เลือกได้สูงสุด {MAX_SELECT} รูปต่อครั้ง</div>}
 
       {lightbox !== null && photos[lightbox] && (
-        <div className="lightbox" onClick={() => setLightbox(null)}>
-          <button className="lightbox-close" aria-label="ปิด" onClick={() => setLightbox(null)}>✕</button>
+        <div className="lightbox" onClick={() => closeLightbox()}>
+          <button className="lightbox-close" aria-label="ปิด" onClick={() => closeLightbox()}>✕</button>
           {lightbox > 0 && (
             <button className="lightbox-nav prev" aria-label="รูปก่อนหน้า" onClick={e => { e.stopPropagation(); setLightbox(lightbox - 1); }}>‹</button>
           )}
