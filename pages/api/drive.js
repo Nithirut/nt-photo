@@ -204,8 +204,16 @@ export default async function handler(req, res) {
         return (a.name || '').localeCompare(b.name || '');
       });
 
+      // Trim the response to ONLY the fields the client uses: id + name. The UI
+      // builds its own thumbnail/view URLs from photo.id and downloads by id, so
+      // thumbnailLink / createdTime / imageMediaMetadata / mimeType are never read
+      // client-side (they were only used above for server-side sorting). Dropping
+      // them here roughly halves the photos payload (thumbnailLink alone was ~49%)
+      // with zero UI/behaviour change. No cache/logic change.
+      const slimPhotos = photos.map((p) => ({ id: p.id, name: p.name }));
+
       setSuccessCacheHeaders(res);
-      return res.status(200).json({ photos });
+      return res.status(200).json({ photos: slimPhotos });
     }
 
     if (type === 'latest') {
