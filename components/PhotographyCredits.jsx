@@ -43,7 +43,7 @@ const photographers = {
     },
     {
       key: 'home',
-      img: '/photographers/Home_1.jpg',
+      img: '/photographers/Home_1.png',
       nickname: 'โฮม',
       name: 'หัชพงษ์ พาเลิศชัยวงศ์',
       roles: ['Backup Photographer', 'Second Shooter'],
