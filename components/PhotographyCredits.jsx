@@ -31,7 +31,7 @@ const photographers = {
       nickname: 'ฟาแลนด์',
       name: 'สุภาณี จันทร์ภาค',
       roles: ['Main Photographer', 'Second Shooter'],
-      credits: ['NT Photo', 'Openhouse', 'Nextgen', 'Leader', 'NT1193'],
+      credits: ['NT Photo Team', 'Openhouse', 'Nextgen', 'Leader', 'NT1193'],
     },
     {
       key: 'futamin',
@@ -39,7 +39,7 @@ const photographers = {
       nickname: 'ฟุ๊',
       name: 'วีระเกียรติ เสวตวิวัฒน์',
       roles: ['Main Photographer', 'Candid Photographer'],
-      credits: ['NT Photo', 'FA CLUB', 'NFC CLUB', 'Turn PRO', 'NT217'],
+      credits: ['NT Photo Team', 'FA CLUB', 'NFC CLUB', 'Turn PRO', 'NT217'],
     },
     {
       key: 'home',
@@ -47,7 +47,7 @@ const photographers = {
       nickname: 'โฮม',
       name: 'หัชพงษ์ พาเลิศชัยวงศ์',
       roles: ['Backup Photographer', 'Second Shooter'],
-      credits: ['NT Photo', 'NT350'],
+      credits: ['NT Photo Team', 'NT350'],
     },
   ],
 };
