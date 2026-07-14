@@ -103,8 +103,8 @@ export default function PhotographyCredits() {
         /* 4:5 photo shell. Portrait sources ≈4:5 (Lookkeaw/Farland/Futamin) fit with
            no crop; the 2:3 sources (Beer/Home) lose small equal top/bottom margins
            only — face stays centered, head + camera preserved as far as the frame allows. */
-        .pc-photo { aspect-ratio:4/5; background:#141414; }
-        .pc-photo img { width:100%; height:100%; object-fit:cover; object-position:center; display:block; }
+        .pc-photo { aspect-ratio:4/5; background:#141414; position:relative; overflow:hidden; }
+        .pc-photo img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; display:block; }
         .pc-body { padding:12px 14px 16px; }
         .pc-nick { font-family:'Playfair Display',serif; color:#c9a84c; font-weight:700; line-height:1.2; }
         .pc-card.lead .pc-nick { font-size:18px; }
