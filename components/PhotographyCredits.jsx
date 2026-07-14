@@ -1,6 +1,6 @@
 // Photography Credits — NT Photo team showcase.
-// Static, confirmed data only: two photographers in the approved order
-// (Beer, then Lookkeaw). Roles and team/credits render as premium dark-gold
+// Static, confirmed data only: photographers in the approved order
+// (Beer, Lookkeaw, then Farland). Roles and team/credits render as premium dark-gold
 // badges (non-interactive). No placeholders, no unconfirmed data.
 const PHOTOGRAPHERS = [
   {
@@ -18,6 +18,14 @@ const PHOTOGRAPHERS = [
     name: 'นิธิรุจน์ จิราธีระพัฒน์',
     roles: ['Second Shooter', 'Gallery Creator'],
     credits: ['LICA Photo Team', 'NT Photo Team', 'NT866'],
+  },
+  {
+    key: 'farland',
+    img: '/photographers/Farland_1.png',
+    nickname: 'ฟาแลนด์',
+    name: 'สุภาณี จันทร์ภาค',
+    roles: ['Main Photographer', 'Second Shooter'],
+    credits: ['NT Photo', 'Openhouse', 'Nextgen', 'Leader', 'NT1193'],
   },
 ];
 
