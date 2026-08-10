@@ -791,7 +791,7 @@ export default function Gallery() {
 
       {lightbox !== null && photos[lightbox] && (
         <div className="lightbox" onClick={() => closeLightbox()}>
-          <button className="lightbox-close" aria-label="ปิด" onClick={() => closeLightbox()}>✕</button>
+          <button className="lightbox-close" aria-label="ปิด" onClick={e => { e.stopPropagation(); closeLightbox(); }}>✕</button>
           {lightbox > 0 && (
             <button className="lightbox-nav prev" aria-label="รูปก่อนหน้า" onClick={e => { e.stopPropagation(); setLightbox(lightbox - 1); }}>‹</button>
           )}
