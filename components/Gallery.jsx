@@ -557,7 +557,17 @@ export default function Gallery() {
         .group-emoji { font-size:44px; margin-bottom:12px; }
         .group-name { font-family:'Playfair Display',serif; font-size:15px; font-weight:700; color:#f0ece4; line-height:1.4; margin-bottom:6px; }
         .group-sub { font-size:10px; color:#c9a84c; letter-spacing:2px; text-transform:uppercase; }
-        .folder-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:18px; }
+        /* Subfolder / activity cards: compact responsive grid.
+           2-up (mobile) -> 3-up (>=560px) -> auto-fill ~180px (>=820px, ~4-6 up on
+           desktop). minmax(0,1fr) prevents track blow-out / horizontal overflow.
+           Scope is .folder-grid only; Poster/Photo Grid/Credits are unaffected. */
+        .folder-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; margin-top:20px; }
+        @media (min-width:560px) { .folder-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; } }
+        @media (min-width:820px) { .folder-grid { grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:14px; } }
+        /* Trim the card icon/title inside this grid only (overrides AdaptivePosterCard's
+           styled-jsx via higher specificity; the component itself is untouched). */
+        .folder-grid .apc-card .apc-icon { font-size:38px; }
+        .folder-grid .apc-card .apc-title { font-size:13px; line-height:1.25; margin-top:7px; }
         .folder-card {
           background:linear-gradient(135deg,#1a1a1a,#141414);
           border:1px solid rgba(255,255,255,0.08); border-radius:16px;
