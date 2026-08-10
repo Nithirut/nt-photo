@@ -94,11 +94,13 @@ export default function PhotographyCredits() {
         .pc-card { background:linear-gradient(135deg,#1a1a1a,#141414); border:1px solid rgba(201,168,76,0.22); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; }
         /* Sizes give a clear hierarchy: Lead cards are bigger than Photo Team,
            but both keep the same 4:5 shell so the team reads as one group. */
-        .pc-card.lead { width:100%; max-width:260px; }
-        .pc-card.team { width:calc(50% - 8px); max-width:190px; }
+        .pc-card.lead { width:100%; max-width:240px; }
+        .pc-card.team { width:calc(50% - 8px); max-width:180px; }
         @media (min-width:640px){
-          .pc-card.lead { width:300px; max-width:300px; }
-          .pc-card.team { width:230px; max-width:230px; }
+          /* Sizes brought closer so the 5 cards read as one group; Lead stays a
+             touch larger than Photo Team (265 vs 215) instead of the old 300 vs 230. */
+          .pc-card.lead { width:265px; max-width:265px; }
+          .pc-card.team { width:215px; max-width:215px; }
         }
         /* 4:5 photo shell. Portrait sources ≈4:5 (Lookkeaw/Farland/Futamin) fit with
            no crop; the 2:3 sources (Beer/Home) lose small equal top/bottom margins
